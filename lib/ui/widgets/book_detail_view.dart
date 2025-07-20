@@ -19,17 +19,16 @@ class BookDetailView extends ConsumerStatefulWidget {
 
 class _BookDetailViewState extends ConsumerState<BookDetailView> {
   DownloadFormat _selectedFormat = DownloadFormat.singleTxt;
+  // --- 新增: 状态变量，用于在异步方法和 build 方法之间传递数据 ---
+  String? _lastDownloadedPath;
 
   Future<void> _startDownload(Book book) async {
     String? outputPath;
     final fileName = book.title.replaceAll(RegExp(r'[/:*?"<>|]'), '_');
-
-    // --- 核心修改点: 根据平台执行不同的文件选择逻辑 ---
     final bool isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
     try {
       if (isDesktop) {
-        // --- 桌面端逻辑 (保持原有逻辑) ---
         if (_selectedFormat == DownloadFormat.chapterTxt) {
           outputPath = await FilePicker.platform.getDirectoryPath(dialogTitle: '请选择保存目录');
         } else {
@@ -42,67 +41,75 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           );
         }
       } else {
-        // --- 移动端逻辑 (Android/iOS) ---
-        // 统一让用户选择一个文件夹
         String? dirPath = await FilePicker.platform.getDirectoryPath(dialogTitle: '请选择保存目录');
-
         if (dirPath != null) {
           if (_selectedFormat == DownloadFormat.chapterTxt) {
-            // 对于分章节，直接使用选择的目录路径
             outputPath = dirPath;
           } else {
-            // 对于单文件，我们在选择的目录路径下拼接文件名
             String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
             outputPath = '$dirPath/$fileName.$extension';
           }
         }
       }
     } catch (e) {
-      // 捕获文件选择器可能出现的异常
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('文件选择失败: $e')),
       );
       return;
     }
 
-
     if (outputPath != null) {
+      // --- 修改点: 在启动下载前，保存文件路径到状态变量 ---
+      setState(() {
+        _lastDownloadedPath = outputPath;
+      });
+      // --- 修改点: 移除了这里的 ref.listen ---
       ref.read(downloadProvider.notifier).startDownload(
         book: book,
         format: _selectedFormat,
         savePath: outputPath,
       );
-
-      // 监听下载状态以显示完成提示
-      ref.listen<DownloadState>(downloadProvider, (previous, next) {
-        if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('下载完成: $outputPath'),
-                // --- 核心修改点: 条件性地构建整个 SnackBarAction ---
-                action: _selectedFormat != DownloadFormat.chapterTxt
-                    ? SnackBarAction( // 如果不是分章节，就构建一个 SnackBarAction
-                  label: '打开',
-                  onPressed: () => OpenFile.open(outputPath!), // 这里的 onPressed 始终是一个有效的函数
-                )
-                    : null, // 如果是分章节，就直接给 action 属性传递 null，不显示按钮
-              )
-          );
-        }
-      });
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('操作已取消')),
       );
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
-    // --- 修改点 2: 使用 ref.listen 监听错误状态并弹窗 ---
+    // --- 核心修改点: 调整 ref.listen 的内部逻辑 ---
+    ref.listen<DownloadState>(downloadProvider, (previous, next) {
+      if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
+        // 检查路径是否存在
+        if (_lastDownloadedPath != null) {
+
+          // --- 解决方案: 创建一个局部 final 变量来捕获当前路径的值 ---
+          final String path = _lastDownloadedPath!;
+
+          // 显示 SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                // 使用局部变量 'path'
+                content: Text('下载完成: $path'),
+                action: _selectedFormat != DownloadFormat.chapterTxt
+                    ? SnackBarAction(
+                  label: '打开',
+                  // 回调函数现在捕获的是局部变量 'path'，它的值不会被改变
+                  onPressed: () => OpenFile.open(path),
+                )
+                    : null,
+              )
+          );
+          // 现在可以安全地清空成员变量，为下一次下载做准备了
+          _lastDownloadedPath = null;
+        }
+      }
+    });
+
     ref.listen<BookState>(bookProvider, (previous, next) {
-      // 仅当错误状态从无到有时触发
       if (next.error != null && previous?.error == null) {
         showDialog(
           context: context,
@@ -123,7 +130,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     final bookState = ref.watch(bookProvider);
     final book = bookState.book;
 
-    // --- 修改点 1: 为加载动画提供最小高度以居中 ---
     if (bookState.isLoading) {
       return Container(
         constraints: const BoxConstraints(minHeight: 400),
@@ -131,9 +137,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       );
     }
 
-    // 错误状态现在由上面的 ref.listen 处理，UI上不再显示错误文本
-
-    // --- 修改点 1: 为初始提示提供最小高度以居中 ---
     if (book == null) {
       return Container(
         constraints: const BoxConstraints(minHeight: 400),
@@ -141,7 +144,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       );
     }
 
-    // 当有书籍信息时，显示正常的卡片UI
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 2,
@@ -192,10 +194,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     );
   }
 
+  // _buildDownloadControls 方法保持不变
   Widget _buildDownloadControls(Book book) {
     final downloadState = ref.watch(downloadProvider);
 
-    // 将通用的子组件定义在外面，避免重复代码
     final labelAndDropdown = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -226,6 +228,8 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
             items: const [
               DropdownMenuItem(value: DownloadFormat.singleTxt, child: Text('TXT (单文件)')),
               DropdownMenuItem(value: DownloadFormat.chapterTxt, child: Text('TXT (分章节)')),
+              // 你可以在这里加回 EPUB 选项
+              // DropdownMenuItem(value: DownloadFormat.epub, child: Text('EPUB')),
             ],
             onChanged: downloadState.isDownloading
                 ? null
@@ -248,36 +252,26 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       ),
     );
 
-    // --- 核心修改点: 使用 LayoutBuilder 来创建响应式布局 ---
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 定义一个断点，用于区分宽窄屏幕
         const double breakpoint = 420.0;
-
-        // 如果可用宽度小于断点（窄屏，如手机）
         if (constraints.maxWidth < breakpoint) {
-          // 使用 Column 布局
           return Column(
-            // 让所有子组件都从左侧开始对齐
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               labelAndDropdown,
-              const SizedBox(height: 16), // 添加垂直间距
-              // 使用 Align 将按钮对齐到右侧
+              const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
                 child: downloadButton,
               ),
             ],
           );
-        }
-        // 如果可用宽度大于等于断点（宽屏，如桌面、平板）
-        else {
-          // 使用 Row 布局
+        } else {
           return Row(
             children: [
               labelAndDropdown,
-              const Spacer(), // Spacer 会占据所有可用空间，将按钮推到最右边
+              const Spacer(),
               downloadButton,
             ],
           );

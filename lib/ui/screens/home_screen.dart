@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 import '../../providers/book_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../widgets/book_detail_view.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/status_bar.dart';
@@ -14,7 +15,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchController = TextEditingController();
-    final bookState = ref.watch(bookProvider);
+    // final bookState = ref.watch(bookProvider);
 
     void performSearch() {
       final bookId = searchController.text.trim();
@@ -50,12 +51,28 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
 
+    final themeMode = ref.watch(themeProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('灵猫小说下载器'),
         elevation: 2,
         // --- 修改点 2: 添加“关于”按钮 ---
         actions: [
+          IconButton(
+            // 根据当前主题模式显示不同的图标
+            icon: Icon(
+                themeMode == ThemeMode.dark
+                    ? Icons.light_mode_outlined // 在暗色模式下显示太阳
+                    : Icons.dark_mode_outlined  // 在亮色/系统模式下显示月亮
+            ),
+            tooltip: '切换模式',
+            onPressed: () {
+              // 调用 Notifier 中的方法来切换主题
+              // 这里使用 ref.read 是因为我们不需要在按钮按下时重建这个小部件
+              ref.read(themeProvider.notifier).toggleTheme();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: '关于',

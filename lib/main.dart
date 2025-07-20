@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 
 import 'ui/screens/home_screen.dart';
+import 'providers/theme_provider.dart';
 
 void main() {
   // try {
@@ -26,14 +27,13 @@ void main() {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme.apply(
-      fontFamily: 'HarmonyOSSansSC', // 设置默认字体为 HarmonyOS Sans SC
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp(
       title: '灵猫小说下载器',
@@ -52,21 +52,22 @@ class MyApp extends StatelessWidget {
       ],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.light, // 明确指定亮度
+        ),
         useMaterial3: true,
         fontFamily: 'HarmonyOSSansSC', // 设置默认字体为 HarmonyOS Sans SC
-        textTheme: textTheme,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
+          brightness: Brightness.dark, // 明确指定亮度
         ),
         useMaterial3: true,
         fontFamily: 'HarmonyOSSansSC', // 设置默认字体为 HarmonyOS Sans SC
-        textTheme: textTheme,
       ),
-      themeMode: ThemeMode.system,
+      themeMode: themeMode,
       home: const HomeScreen(),
     );
   }

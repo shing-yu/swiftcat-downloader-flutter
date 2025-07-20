@@ -17,12 +17,10 @@ class StatusBar extends ConsumerWidget {
         ? Theme.of(context).textTheme.bodySmall?.copyWith(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
           )
         : Theme.of(context).textTheme.bodyMedium?.copyWith(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
           );
 
     return Container(

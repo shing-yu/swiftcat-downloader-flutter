@@ -94352,7 +94352,7 @@ while(true)switch(s){case 0:m=t.N
 l=A.au(["id",a,"imei_ip","2937357107","teeny_mode","0"],m,m)
 l.m(0,"sign",p.E9(l,"d3dGiJc651gSQ8w1"))
 s=3
-return A.P(p.a.KE("https://api-bc.wtzw.example.com/api/v4/book/detail",A.aJP(p.OT(a)),l,t.z),$async$A0)
+return A.P(p.a.KE("https://api-bc.wtzw.staredges.cn/api/v4/book/detail",A.aJP(p.OT(a)),l,t.z),$async$A0)
 case 3:o=c
 m=o.c===200&&J.et(o.a,"data")!=null
 n=o.a
@@ -94368,7 +94368,7 @@ while(true)switch(s){case 0:k=t.N
 j=A.au(["chapter_ver","0","id",a],k,k)
 j.m(0,"sign",p.E9(j,"d3dGiJc651gSQ8w1"))
 s=3
-return A.P(p.a.KE("https://api-ks.wtzw.example.com/api/v1/chapter/chapter-list",A.aJP(p.OT(a)),j,t.z),$async$A1)
+return A.P(p.a.KE("https://api-ks.wtzw.staredges.cn/api/v1/chapter/chapter-list",A.aJP(p.OT(a)),j,t.z),$async$A1)
 case 3:o=c
 k=o.c===200&&J.et(J.et(o.a,"data"),"chapter_lists")!=null
 n=o.a

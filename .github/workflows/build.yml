@@ -137,8 +137,12 @@ jobs:
           path: build/linux/x64/release/bundle/
 
   build_web:
-    name: Build Web
+    name: Build and Deploy Web to a Branch
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -153,10 +157,10 @@ jobs:
           TARGET_FILE="lib/core/api_client.dart"
           if [ -f "$TARGET_FILE" ]; then
             echo "Modifying API endpoints in $TARGET_FILE..."
-            # Use sed to replace the URLs. The '#' delimiter avoids conflicts with slashes in URLs.
-            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.staredges.cn#g' $TARGET_FILE
-            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.staredges.cn#g' $TARGET_FILE
+            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.example.com#g' $TARGET_FILE
+            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.example.com#g' $TARGET_FILE
             echo "File modification complete."
+            cat $TARGET_FILE
           else
             echo "Error: Target file $TARGET_FILE not found!"
             exit 1
@@ -176,3 +180,15 @@ jobs:
         with:
           name: web-build
           path: web-build.tar.gz
+
+      - name: Deploy to a separate branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          publish_dir: ./build/web
+
+          publish_branch: web-builds
+
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'

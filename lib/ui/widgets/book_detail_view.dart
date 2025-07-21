@@ -4,11 +4,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
+import 'dart:io' show Platform , File, Directory;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/book_downloader.dart';
 import '../../models/book.dart';
 import '../../providers/book_provider.dart';
+
+/// (仅安卓) 检查文件路径是否存在，如果存在，则返回一个新的、不冲突的文件路径。
+Future<String> _getUniqueFilePath(String filePath) async {
+  String newPath = filePath;
+  int counter = 1;
+  final context = p.Context(style: p.Style.posix);
+
+  while (await File(newPath).exists() || await Directory(newPath).exists()) {
+    final String directory = context.dirname(filePath);
+    final String extension = context.extension(filePath);
+    final String filenameWithoutExt = context.basenameWithoutExtension(filePath);
+
+    newPath = context.join(directory, '$filenameWithoutExt($counter)$extension');
+    counter++;
+  }
+
+  return newPath;
+}
 
 class BookDetailView extends ConsumerStatefulWidget {
   const BookDetailView({super.key});
@@ -22,13 +43,70 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
   // --- 新增: 状态变量，用于在异步方法和 build 方法之间传递数据 ---
   String? _lastDownloadedPath;
 
+  Future<String?> _getMobileDownloadsDirectory() async {
+    Directory? directory;
+    try {
+      if (Platform.isIOS) {
+        // iOS 平台保存到应用文档目录
+        directory = await getApplicationDocumentsDirectory();
+      } else {
+        // Android 平台，首先尝试公共的 Download 目录
+        directory = Directory('/storage/emulated/0/Download');
+        // 如果这个目录因为某些原因不存在，则回退到应用外部存储的根目录
+        if (!await directory.exists()) {
+          directory = await getExternalStorageDirectory();
+        }
+      }
+    } catch (err) {
+      print("获取下载文件夹路径失败: $err");
+    }
+    return directory?.path;
+  }
+
   Future<void> _startDownload(Book book) async {
     String? outputPath;
     final fileName = book.title.replaceAll(RegExp(r'[/:*?"<>|]'), '_');
-    final bool isDesktop = !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    final bool isAndroid = !kIsWeb && Platform.isAndroid;
+    final bool isIOS = !kIsWeb && Platform.isIOS;
 
     try {
-      if (isDesktop) {
+      if (isAndroid || isIOS) {
+        // --- 移动平台 (Android/iOS) 逻辑 ---
+        var hasPermission = true;
+        if (isAndroid) {
+          // 只在 Android 上请求权限
+          var status = await Permission.storage.status;
+          if (status.isDenied) {
+            status = await Permission.storage.request();
+          }
+          hasPermission = status.isGranted;
+        }
+
+        if (hasPermission) {
+          // --- 核心修改点: 使用新的路径获取方法 ---
+          final String? downloadsPath = await _getMobileDownloadsDirectory();
+
+          if (downloadsPath != null) {
+            String initialPath;
+            if (_selectedFormat == DownloadFormat.chapterTxt) {
+              initialPath = '$downloadsPath/$fileName';
+            } else {
+              String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
+              initialPath = '$downloadsPath/$fileName.$extension';
+            }
+            // 同样只在 Android 上处理同名问题
+            outputPath = isAndroid ? await _getUniqueFilePath(initialPath) : initialPath;
+          } else {
+            throw Exception("无法获取下载目录。");
+          }
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('需要存储权限才能下载文件。')),
+          );
+          return;
+        }
+      } else {
         if (_selectedFormat == DownloadFormat.chapterTxt) {
           outputPath = await FilePicker.platform.getDirectoryPath(dialogTitle: '请选择保存目录');
         } else {
@@ -40,22 +118,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
             allowedExtensions: [extension],
           );
         }
-      } else {
-        String? dirPath = await FilePicker.platform.getDirectoryPath(dialogTitle: '请选择保存目录');
-        if (dirPath != null) {
-          if (_selectedFormat == DownloadFormat.chapterTxt) {
-            outputPath = dirPath;
-          } else {
-            String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
-            outputPath = '$dirPath/$fileName.$extension';
-          }
-        }
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('文件选择失败: $e')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('文件路径获取失败: $e')));
       return;
     }
 

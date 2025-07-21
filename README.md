@@ -1,16 +1,19 @@
-# swiftcat_downloader
+# SwiftCat Downloader Flutter
 
-A beautiful and responsive novel downloader.
+一个用于下载七猫小说的工具。
 
-## Getting Started
+[swiftcat-downloader](https://github.com/shing-yu/swiftcat-downloader) 的 Flutter 版本。
 
-This project is a starting point for a Flutter application.
+**Flutter 版本是技术测试版本，不保证稳定性。**
 
-A few resources to get you started if this is your first Flutter project:
+**Flutter 版本不支持Epub下载格式。**
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 许可
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+基于 星缘工作室软件共享许可证A 1.0 (SSLA 1.0) 发布，详情见 [LICENSE.md](https://github.com/shing-yu/swiftcat-downloader-flutter/blob/main/LICENSE.md)。
+
+仅供个人使用，严禁用于任何商业目的。
+
+## 技术支持
+
+社区Q群：690736066

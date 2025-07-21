@@ -45,7 +45,7 @@ jobs:
           flutter build apk --release
 
       - name: Upload Android Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: |
@@ -90,7 +90,7 @@ jobs:
       # 步骤 6: 上传构建好的 .ipa 文件作为产物
       # 您可以在工作流运行结束后下载这个文件
       - name: Upload Re-signable IPA Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: resignable-ipa-build
           path: re-signable-app.ipa
@@ -103,7 +103,7 @@ jobs:
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: flutter build windows --release
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: build/windows/runner/Release/
@@ -116,7 +116,7 @@ jobs:
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: flutter build macos --release
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: build/macos/Build/Products/Release/
@@ -131,7 +131,7 @@ jobs:
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
       - run: flutter build linux --release
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: build/linux/x64/release/bundle/

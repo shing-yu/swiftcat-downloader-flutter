@@ -39,6 +39,12 @@ android {
     }
 }
 
+dependencies {
+    // ...
+    implementation("com.google.android.material:material:3")
+    // ...
+}
+
 flutter {
     source = "../.."
 }

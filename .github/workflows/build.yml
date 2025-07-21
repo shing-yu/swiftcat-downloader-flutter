@@ -1,0 +1,144 @@
+name: Flutter CI Build
+
+on:
+  push:
+    tags:
+      - '*'  # 监听所有标签的推送
+  workflow_dispatch:
+    # 允许手动触发工作流
+
+jobs:
+  build_android:
+    name: Build Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # 或指定版本 '3.x.x'
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Decode Keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: Create key.properties file
+        run: |
+          echo "storeFile=$(pwd)/android/app/upload-keystore.jks" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+
+      - name: Build Flutter App Bundle and APK
+        run: |
+          flutter build appbundle --release
+          flutter build apk --release
+
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-builds
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
+
+  build_ios:
+    name: Build iOS IPA for Re-signing
+      # iOS 构建必须在 macOS 环境下运行
+    runs-on: macos-latest
+
+    steps:
+      # 步骤 1: 检出您的项目代码
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 步骤 2: 设置 Flutter 环境
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable' # 或者您项目指定的 Flutter 版本
+
+      # 步骤 3: 获取 Flutter 依赖包
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      # 步骤 4: 构建未签名的 .app 文件
+      # 这是关键步骤，使用 --no-codesign 参数
+      - name: Build unsigned .app bundle
+        run: flutter build ios --release --no-codesign
+
+      # 步骤 5: 手动打包成 .ipa 文件
+      # a. 创建一个名为 Payload 的文件夹
+      # b. 将构建好的 .app 文件移动到 Payload 文件夹中
+      # c. 使用 zip 命令将 Payload 文件夹压缩成 .ipa 文件
+      - name: Package .app into .ipa
+        run: |
+          mkdir Payload
+          mv build/ios/iphoneos/Runner.app Payload/
+          zip -r re-signable-app.ipa Payload/
+
+      # 步骤 6: 上传构建好的 .ipa 文件作为产物
+      # 您可以在工作流运行结束后下载这个文件
+      - name: Upload Re-signable IPA Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: resignable-ipa-build
+          path: re-signable-app.ipa
+
+  build_windows:
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: windows-build
+          path: build/windows/runner/Release/
+
+  build_macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter build macos --release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: macos-build
+          path: build/macos/Build/Products/Release/
+
+  build_linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Linux dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: linux-build
+          path: build/linux/x64/release/bundle/
+
+  build_web:  # 待实现
+    name: Build Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: skip web build
+        run: echo "skip web build"

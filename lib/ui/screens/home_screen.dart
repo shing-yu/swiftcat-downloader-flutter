@@ -165,7 +165,7 @@ class HomeScreen extends ConsumerWidget {
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 // 在此处替换为您要打开的SSLA 1.0许可的URL
-                                launchUrl(Uri.parse('https://staredges.cn/'));
+                                launchUrl(Uri.parse('https://staredges.cn/ssla-1.0/'));
                               },
                           ),
                           const TextSpan(text: ' 许可发布\n禁止用于商业用途或盈利性活动'),

@@ -1,4 +1,4 @@
-### **星缘工作室软件共享许可证A (SSLA)**
+# **星缘工作室软件共享许可证A**
 **StarEdge Studio Software Sharing License A**
 
 **SSLA, Version 1.0, 21 July 2025**

@@ -8,6 +8,35 @@ import '../../providers/theme_provider.dart';
 import '../widgets/book_detail_view.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/status_bar.dart';
+import '../../globals.dart';
+
+String? _parseBookIdInput(String input) {
+  // 预编译正则表达式以提高效率
+  final pureDigitsRegex = RegExp(r'^\d+$');
+  final qimaoUrlRegex = RegExp(r'www\.qimao\.com/shuku/(\d+)');
+  final wtzwUrlRegex = RegExp(r'app-share\.wtzw\.com/article-detail/(\d+)');
+
+  // 1. 检查是否为纯数字
+  if (pureDigitsRegex.hasMatch(input)) {
+    return input;
+  }
+
+  // 2. 检查是否为七猫网站链接
+  RegExpMatch? qimaoMatch = qimaoUrlRegex.firstMatch(input);
+  if (qimaoMatch != null) {
+    // group(0)是整个匹配，group(1)是第一个括号内的捕获组
+    return qimaoMatch.group(1);
+  }
+
+  // 3. 检查是否为分享链接
+  RegExpMatch? wtzwMatch = wtzwUrlRegex.firstMatch(input);
+  if (wtzwMatch != null) {
+    return wtzwMatch.group(1);
+  }
+
+  // 4. 如果都不是，返回 null
+  return null;
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -15,18 +44,52 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchController = TextEditingController();
-    // final bookState = ref.watch(bookProvider);
 
+    // --- 核心修改点: 重构 performSearch 方法 ---
     void performSearch() {
-      final bookId = searchController.text.trim();
-      if (bookId.isNotEmpty) {
-        // 在开始新的搜索前，可以选择性地清除旧状态
-        // ref.read(bookProvider.notifier).clear();
-        ref.read(bookProvider.notifier).fetchBook(bookId);
-      } else {
+      final rawInput = searchController.text.trim();
+      if (rawInput.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请输入小说ID')),
+          const SnackBar(content: Text('请输入小说ID或链接')),
         );
+        return;
+      }
+
+      // 调用解析函数
+      final String? parsedId = _parseBookIdInput(rawInput);
+
+      // 根据解析结果执行操作
+      if (parsedId != null) {
+        // --- 逻辑分支 1 & 2: 成功解析 ---
+
+        // 如果解析出的ID与原始输入不同（说明是从URL中提取的），则更新输入框
+        if (parsedId != rawInput) {
+          searchController.text = parsedId;
+        }
+
+        // 使用干净的ID执行搜索
+        ref.read(bookProvider.notifier).fetchBook(parsedId);
+
+      } else {
+        // --- 逻辑分支 3: 解析失败 ---
+
+        // 弹窗报错
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('输入无效'),
+            content: const Text('请输入纯数字ID或有效的七猫小说链接。'),
+            actions: [
+              TextButton(
+                child: const Text('确定'),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        );
+
+        // 清除输入框内容
+        searchController.clear();
       }
     }
 
@@ -51,7 +114,7 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
 
-    final themeMode = ref.watch(themeProvider);
+    final Brightness currentBrightness = Theme.of(context).brightness;
 
     return Scaffold(
       appBar: AppBar(
@@ -62,7 +125,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             // 根据当前主题模式显示不同的图标
             icon: Icon(
-                themeMode == ThemeMode.dark
+                currentBrightness == Brightness.dark
                     ? Icons.light_mode_outlined // 在暗色模式下显示太阳
                     : Icons.dark_mode_outlined  // 在亮色/系统模式下显示月亮
             ),
@@ -70,7 +133,7 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () {
               // 调用 Notifier 中的方法来切换主题
               // 这里使用 ref.read 是因为我们不需要在按钮按下时重建这个小部件
-              ref.read(themeProvider.notifier).toggleTheme();
+              ref.read(themeProvider.notifier).toggleTheme(currentBrightness);
             },
           ),
           IconButton(
@@ -80,7 +143,7 @@ class HomeScreen extends ConsumerWidget {
               showAboutDialog(
                 context: context,
                 applicationName: '灵猫小说下载器 flutter',
-                applicationVersion: '1.0.0-dev.1',
+                applicationVersion: 'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
                 applicationIcon: const Icon(Icons.flutter_dash_rounded),
                 applicationLegalese: '© 2025 StarEdge Studio\n基于原Python项目重构',
                 children: [

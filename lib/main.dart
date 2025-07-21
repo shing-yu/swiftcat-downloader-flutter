@@ -8,20 +8,17 @@ import 'dart:io' show Platform;
 
 import 'ui/screens/home_screen.dart';
 import 'providers/theme_provider.dart';
+import 'globals.dart';
 
-void main() {
-  // try {
-  //   // 设置窗口标题
-  //   WidgetsFlutterBinding.ensureInitialized();
-  //   setWindowTitle("灵猫小说下载器");
-  // } catch (e) {
-  //   // 在非桌面平台上可能会抛出异常，忽略即可
-  // }
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 初始化包信息
+  await initGlobalPackageInfo();
   if (kIsWeb) {
     // Web平台不需要设置窗口大小
   } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     // 设置标题
-    WidgetsFlutterBinding.ensureInitialized();
     setWindowTitle("灵猫小说下载器");
   }
   runApp(const ProviderScope(child: MyApp()));

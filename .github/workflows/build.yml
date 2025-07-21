@@ -172,7 +172,7 @@ jobs:
         run: tar -czvf web-build.tar.gz -C build/web .
 
       - name: Upload Web build artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: web-build
           path: web-build.tar.gz

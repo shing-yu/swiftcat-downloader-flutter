@@ -157,8 +157,8 @@ jobs:
           TARGET_FILE="lib/core/api_client.dart"
           if [ -f "$TARGET_FILE" ]; then
             echo "Modifying API endpoints in $TARGET_FILE..."
-            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.example.com#g' $TARGET_FILE
-            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.example.com#g' $TARGET_FILE
+            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.staredges.cn#g' $TARGET_FILE
+            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.staredges.cn#g' $TARGET_FILE
             echo "File modification complete."
             cat $TARGET_FILE
           else

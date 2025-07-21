@@ -136,9 +136,43 @@ jobs:
           name: linux-build
           path: build/linux/x64/release/bundle/
 
-  build_web:  # 待实现
+  build_web:
     name: Build Web
     runs-on: ubuntu-latest
     steps:
-      - name: skip web build
-        run: echo "skip web build"
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Modify API endpoints for Web build
+        run: |
+          TARGET_FILE="lib/core/api_client.dart"
+          if [ -f "$TARGET_FILE" ]; then
+            echo "Modifying API endpoints in $TARGET_FILE..."
+            # Use sed to replace the URLs. The '#' delimiter avoids conflicts with slashes in URLs.
+            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.staredges.cn#g' $TARGET_FILE
+            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.staredges.cn#g' $TARGET_FILE
+            echo "File modification complete."
+          else
+            echo "Error: Target file $TARGET_FILE not found!"
+            exit 1
+          fi
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Flutter Web app
+        run: flutter build web --release
+
+      - name: Archive Web build artifact
+        run: tar -czvf web-build.tar.gz -C build/web .
+
+      - name: Upload Web build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: web-build
+          path: web-build.tar.gz

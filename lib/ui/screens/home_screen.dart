@@ -144,7 +144,7 @@ class HomeScreen extends ConsumerWidget {
                 context: context,
                 applicationName: '灵猫小说下载器 flutter',
                 applicationVersion: 'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
-                applicationIcon: const Icon(Icons.flutter_dash_rounded),
+                applicationIcon: Image.asset('assets/logo.png', width: 35, height: 35),
                 applicationLegalese: '© 2025 StarEdge Studio\n基于原Python项目重构',
                 children: [
                   Padding(

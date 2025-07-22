@@ -160,7 +160,6 @@ class HomeScreen extends ConsumerWidget {
                             text: 'SSLA 1.0',
                             style: const TextStyle(
                               color: Colors.blue,
-                              decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
@@ -168,7 +167,17 @@ class HomeScreen extends ConsumerWidget {
                                 launchUrl(Uri.parse('https://staredges.cn/ssla-1.0/'));
                               },
                           ),
-                          const TextSpan(text: ' 许可发布\n禁止用于商业用途或盈利性活动'),
+                          const TextSpan(text: ' 许可发布\n禁止用于商业用途或盈利性活动\n'),
+                          const TextSpan(text: '本软件免费提供，谨防上当受骗\n'),
+                          TextSpan(
+                            text: '源代码仓库',
+                            style: const TextStyle(color: Colors.blue),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                // 在此处替换为您的GitHub仓库URL
+                                launchUrl(Uri.parse('https://github.com/shing-yu/swiftcat-downloader-flutter'));
+                              },
+                          ),
                         ],
                       ),
                     ),

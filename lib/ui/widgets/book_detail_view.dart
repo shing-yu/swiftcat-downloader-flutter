@@ -14,6 +14,9 @@ import '../../core/book_downloader.dart';
 import '../../models/book.dart';
 import '../../providers/book_provider.dart';
 
+final bool isAndroid = !kIsWeb && Platform.isAndroid;
+final bool isIOS = !kIsWeb && Platform.isIOS;
+
 /// (仅安卓) 检查文件路径是否存在，如果存在，则返回一个新的、不冲突的文件路径。
 Future<String> _getUniqueFilePath(String filePath) async {
   String newPath = filePath;
@@ -69,8 +72,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
   Future<void> _startDownload(Book book) async {
     String? outputPath;
     final fileName = book.title.replaceAll(RegExp(r'[/:*?"<>|]'), '_');
-    final bool isAndroid = !kIsWeb && Platform.isAndroid;
-    final bool isIOS = !kIsWeb && Platform.isIOS;
 
     try {
       if (kIsWeb) {
@@ -331,11 +332,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             ),
             dropdownColor: Theme.of(context).colorScheme.surface,
-            items: const [
-              DropdownMenuItem(value: DownloadFormat.singleTxt, child: Text('TXT (单文件)')),
-              DropdownMenuItem(value: DownloadFormat.chapterTxt, child: Text('TXT (分章节)')),
-              // 你可以在这里加回 EPUB 选项
-              // DropdownMenuItem(value: DownloadFormat.epub, child: Text('EPUB')),
+            items: [
+              const DropdownMenuItem(value: DownloadFormat.singleTxt, child: Text('TXT (单文件)')),
+              if (!kIsWeb)
+                const DropdownMenuItem(value: DownloadFormat.chapterTxt, child: Text('TXT (分章节)')),
             ],
             onChanged: downloadState.isDownloading
                 ? null

@@ -8,6 +8,7 @@ import 'dart:io' show Platform , File, Directory;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:file_saver/file_saver.dart';
 
 import '../../core/book_downloader.dart';
 import '../../models/book.dart';
@@ -58,7 +59,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         }
       }
     } catch (err) {
-      print("获取下载文件夹路径失败: $err");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('无法获取下载目录')),
+      );
     }
     return directory?.path;
   }
@@ -70,7 +73,30 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     final bool isIOS = !kIsWeb && Platform.isIOS;
 
     try {
-      if (isAndroid || isIOS) {
+      if (kIsWeb) {
+        // --- Web 平台逻辑 ---
+        if (_selectedFormat == DownloadFormat.chapterTxt) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('不支持分章节下载'),
+              content: const Text('Web 平台不支持分章节下载，请选择单文件下载。'),
+              actions: [
+                TextButton(
+                  child: const Text('确定'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+          return;
+        } else {
+          // 获取一个虚拟的、在内存中的目录路径
+          final Directory tempDir = await getApplicationDocumentsDirectory();
+          String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
+          outputPath = '${tempDir.path}/$fileName.$extension';
+        }
+      } else if (isAndroid || isIOS) {
         // --- 移动平台 (Android/iOS) 逻辑 ---
         var hasPermission = true;
         if (isAndroid) {
@@ -154,21 +180,35 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
           // --- 解决方案: 创建一个局部 final 变量来捕获当前路径的值 ---
           final String path = _lastDownloadedPath!;
+          final String fileName = p.basename(path); // 从完整路径中提取文件名
 
           // 显示 SnackBar
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                // 使用局部变量 'path'
-                content: Text('下载完成: $path'),
-                action: _selectedFormat != DownloadFormat.chapterTxt
-                    ? SnackBarAction(
-                  label: '打开',
-                  // 回调函数现在捕获的是局部变量 'path'，它的值不会被改变
-                  onPressed: () => OpenFile.open(path),
+          if (kIsWeb) {
+            // --- Web 平台: 读取虚拟文件并触发浏览器下载 ---
+            final File file = File(path);
+            file.readAsBytes().then((bytes) {
+              // 使用 file_saver 保存文件
+              FileSaver.instance.saveFile(
+                name: p.basenameWithoutExtension(fileName), // 文件名 (无扩展名)
+                bytes: bytes,                                // 文件内容
+                fileExtension: p.extension(fileName).replaceFirst('.', ''), // 扩展名 (去掉点)
+                mimeType: MimeType.text
+              );
+            });
+          } else {
+            // --- 移动/桌面平台: 显示带“打开”按钮的 SnackBar ---
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('下载完成: $path'),
+                  action: _selectedFormat != DownloadFormat.chapterTxt
+                      ? SnackBarAction(
+                    label: '打开',
+                    onPressed: () => OpenFile.open(path),
+                  )
+                      : null,
                 )
-                    : null,
-              )
-          );
+            );
+          }
           // 现在可以安全地清空成员变量，为下一次下载做准备了
           _lastDownloadedPath = null;
         }

@@ -48,6 +48,7 @@ dependencies:
   # 文件与权限
   path_provider: ^2.1.1        # 获取设备文件系统路径
   file_picker: ^10.2.0         # 允许用户选择保存位置
+  file_saver: ^0.3.1           # 用于在web端保存文件
   permission_handler: ^12.0.1  # 处理存储权限 (尤其在 Android)
   open_file: ^3.5.10
 

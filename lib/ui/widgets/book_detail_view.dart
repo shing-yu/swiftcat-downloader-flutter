@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform , File, Directory;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -91,10 +91,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           );
           return;
         } else {
-          // 获取一个虚拟的、在内存中的目录路径
-          final Directory tempDir = await getApplicationDocumentsDirectory();
+          // 对于 Web，我们不需要真实的目录。我们只用文件名作为标识。
+          // 下载器将会在内存中处理数据，而不是写入文件。
           String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
-          outputPath = '${tempDir.path}/$fileName.$extension';
+          outputPath = '$fileName.$extension';
         }
       } else if (isAndroid || isIOS) {
         // --- 移动平台 (Android/iOS) 逻辑 ---
@@ -184,17 +184,17 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
           // 显示 SnackBar
           if (kIsWeb) {
-            // --- Web 平台: 读取虚拟文件并触发浏览器下载 ---
-            final File file = File(path);
-            file.readAsBytes().then((bytes) {
-              // 使用 file_saver 保存文件
+            // --- Web 平台: 直接从 state 获取 bytes 并触发浏览器下载 ---
+            if (next.data != null) {
               FileSaver.instance.saveFile(
                 name: p.basenameWithoutExtension(fileName), // 文件名 (无扩展名)
-                bytes: bytes,                                // 文件内容
+                bytes: next.data!,                            // 文件内容
                 fileExtension: p.extension(fileName).replaceFirst('.', ''), // 扩展名 (去掉点)
                 mimeType: MimeType.text
               );
-            });
+              // --- 新增: 保存文件后，调用清理方法 ---
+              ref.read(downloadProvider.notifier).clearDownloadData();
+            }
           } else {
             // --- 移动/桌面平台: 显示带“打开”按钮的 SnackBar ---
             ScaffoldMessenger.of(context).showSnackBar(

@@ -115,7 +115,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'master'
-          flutter-version: '3.32.0'
+          flutter-version: '3.32.7'
       - run: flutter --version
       - run: flutter pub get
       - run: flutter build windows --release # Flutter 会自动检测 Arm64 环境
@@ -171,7 +171,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'master'
-          flutter-version: '3.32.0'
+          flutter-version: '3.32.7'
       - run: flutter --version
       - run: flutter pub get
       - run: flutter build linux --release # Flutter 会自动检测 Arm64 环境

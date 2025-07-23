@@ -58,6 +58,7 @@ dependencies:
   window_size: ^0.1.0
   url_launcher: ^6.0.0
   package_info_plus: ^8.3.0
+  device_info_plus: ^11.5.0
 
 dev_dependencies:
   flutter_test:

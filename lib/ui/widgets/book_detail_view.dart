@@ -1,14 +1,14 @@
-// lib/ui/widgets/book_detail_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform , File, Directory;
+import 'dart:io' show Platform , Directory;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_saver/file_saver.dart';
+import 'package:device_info_plus/device_info_plus.dart'; // 新增: 用于获取设备信息
 
 import '../../core/book_downloader.dart';
 import '../../models/book.dart';
@@ -17,23 +17,6 @@ import '../../providers/book_provider.dart';
 final bool isAndroid = !kIsWeb && Platform.isAndroid;
 final bool isIOS = !kIsWeb && Platform.isIOS;
 
-/// (仅安卓) 检查文件路径是否存在，如果存在，则返回一个新的、不冲突的文件路径。
-Future<String> _getUniqueFilePath(String filePath) async {
-  String newPath = filePath;
-  int counter = 1;
-  final context = p.Context(style: p.Style.posix);
-
-  while (await File(newPath).exists() || await Directory(newPath).exists()) {
-    final String directory = context.dirname(filePath);
-    final String extension = context.extension(filePath);
-    final String filenameWithoutExt = context.basenameWithoutExtension(filePath);
-
-    newPath = context.join(directory, '$filenameWithoutExt($counter)$extension');
-    counter++;
-  }
-
-  return newPath;
-}
 
 class BookDetailView extends ConsumerStatefulWidget {
   const BookDetailView({super.key});
@@ -44,19 +27,15 @@ class BookDetailView extends ConsumerStatefulWidget {
 
 class _BookDetailViewState extends ConsumerState<BookDetailView> {
   DownloadFormat _selectedFormat = DownloadFormat.singleTxt;
-  // --- 新增: 状态变量，用于在异步方法和 build 方法之间传递数据 ---
   String? _lastDownloadedPath;
 
   Future<String?> _getMobileDownloadsDirectory() async {
     Directory? directory;
     try {
       if (Platform.isIOS) {
-        // iOS 平台保存到应用文档目录
         directory = await getApplicationDocumentsDirectory();
       } else {
-        // Android 平台，首先尝试公共的 Download 目录
         directory = Directory('/storage/emulated/0/Download');
-        // 如果这个目录因为某些原因不存在，则回退到应用外部存储的根目录
         if (!await directory.exists()) {
           directory = await getExternalStorageDirectory();
         }
@@ -75,7 +54,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
     try {
       if (kIsWeb) {
-        // --- Web 平台逻辑 ---
         if (_selectedFormat == DownloadFormat.chapterTxt) {
           showDialog(
             context: context,
@@ -92,44 +70,59 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           );
           return;
         } else {
-          // 对于 Web，我们不需要真实的目录。我们只用文件名作为标识。
-          // 下载器将会在内存中处理数据，而不是写入文件。
           String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
           outputPath = '$fileName.$extension';
         }
       } else if (isAndroid || isIOS) {
-        // --- 移动平台 (Android/iOS) 逻辑 ---
         var hasPermission = true;
         if (isAndroid) {
-          // 只在 Android 上请求权限
-          var status = await Permission.storage.status;
-          if (status.isDenied) {
-            status = await Permission.storage.request();
+          // --- 修改点: 根据安卓版本请求权限 ---
+          final deviceInfo = await DeviceInfoPlugin().androidInfo;
+          PermissionStatus status;
+
+          // Android 11 (API 30) 或更高版本
+          if (deviceInfo.version.sdkInt >= 30) {
+            status = await Permission.manageExternalStorage.status;
+            if (!status.isGranted) {
+              status = await Permission.manageExternalStorage.request();
+            }
+          } else { // Android 10 (API 29) 或更低版本
+            status = await Permission.storage.status;
+            if (!status.isGranted) {
+              status = await Permission.storage.request();
+            }
           }
           hasPermission = status.isGranted;
         }
 
         if (hasPermission) {
-          // --- 核心修改点: 使用新的路径获取方法 ---
           final String? downloadsPath = await _getMobileDownloadsDirectory();
 
           if (downloadsPath != null) {
-            String initialPath;
             if (_selectedFormat == DownloadFormat.chapterTxt) {
-              initialPath = '$downloadsPath/$fileName';
+              outputPath = '$downloadsPath/$fileName';
             } else {
               String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
-              initialPath = '$downloadsPath/$fileName.$extension';
+              outputPath = '$downloadsPath/$fileName.$extension';
             }
-            // 同样只在 Android 上处理同名问题
-            outputPath = isAndroid ? await _getUniqueFilePath(initialPath) : initialPath;
+            // --- 已移除: 不再调用 _getUniqueFilePath ---
           } else {
             throw Exception("无法获取下载目录。");
           }
         } else {
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('需要存储权限才能下载文件。')),
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('权限不足'),
+              content: const Text('需要存储权限才能下载文件'),
+              actions: [
+                TextButton(
+                  child: const Text('确定'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
           );
           return;
         }
@@ -153,11 +146,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     }
 
     if (outputPath != null) {
-      // --- 修改点: 在启动下载前，保存文件路径到状态变量 ---
       setState(() {
         _lastDownloadedPath = outputPath;
       });
-      // --- 修改点: 移除了这里的 ref.listen ---
       ref.read(downloadProvider.notifier).startDownload(
         book: book,
         format: _selectedFormat,
@@ -173,31 +164,23 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    // --- 核心修改点: 调整 ref.listen 的内部逻辑 ---
     ref.listen<DownloadState>(downloadProvider, (previous, next) {
       if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
-        // 检查路径是否存在
         if (_lastDownloadedPath != null) {
-
-          // --- 解决方案: 创建一个局部 final 变量来捕获当前路径的值 ---
           final String path = _lastDownloadedPath!;
-          final String fileName = p.basename(path); // 从完整路径中提取文件名
+          final String fileName = p.basename(path);
 
-          // 显示 SnackBar
           if (kIsWeb) {
-            // --- Web 平台: 直接从 state 获取 bytes 并触发浏览器下载 ---
             if (next.data != null) {
               FileSaver.instance.saveFile(
-                name: p.basenameWithoutExtension(fileName), // 文件名 (无扩展名)
-                bytes: next.data!,                            // 文件内容
-                fileExtension: p.extension(fileName).replaceFirst('.', ''), // 扩展名 (去掉点)
-                mimeType: MimeType.text
+                  name: p.basenameWithoutExtension(fileName),
+                  bytes: next.data!,
+                  fileExtension: p.extension(fileName).replaceFirst('.', ''),
+                  mimeType: MimeType.text
               );
-              // --- 新增: 保存文件后，调用清理方法 ---
               ref.read(downloadProvider.notifier).clearDownloadData();
             }
           } else {
-            // --- 移动/桌面平台: 显示带“打开”按钮的 SnackBar ---
             ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('下载完成: $path'),
@@ -210,7 +193,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                 )
             );
           }
-          // 现在可以安全地清空成员变量，为下一次下载做准备了
           _lastDownloadedPath = null;
         }
       }
@@ -301,7 +283,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     );
   }
 
-  // _buildDownloadControls 方法保持不变
   Widget _buildDownloadControls(Book book) {
     final downloadState = ref.watch(downloadProvider);
 

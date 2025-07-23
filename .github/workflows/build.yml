@@ -113,6 +113,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
+      - run: flutter --version
       - run: flutter pub get
       - run: flutter build windows --release # Flutter 会自动检测 Arm64 环境
       - uses: actions/upload-artifact@v4
@@ -165,6 +166,7 @@ jobs:
       - name: Install Linux dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
       - uses: subosito/flutter-action@v2
+      - run: flutter --version
       - run: flutter pub get
       - run: flutter build linux --release # Flutter 会自动检测 Arm64 环境
       - uses: actions/upload-artifact@v4

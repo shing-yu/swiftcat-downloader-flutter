@@ -2,9 +2,6 @@
 name: Build Android App
 
 on:
-  push:
-    tags:
-      - '*'  # 监听所有标签的推送
   workflow_dispatch:
   # 允许手动触发工作流
 

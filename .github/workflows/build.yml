@@ -5,7 +5,7 @@ on:
     tags:
       - '*'  # 监听所有标签的推送
   workflow_dispatch:
-    # 允许手动触发工作流
+  # 允许手动触发工作流
 
 jobs:
   build_android:
@@ -54,59 +54,62 @@ jobs:
 
   build_ios:
     name: Build iOS IPA for Re-signing
-      # iOS 构建必须在 macOS 环境下运行
+    # iOS 构建必须在 macOS 环境下运行
     runs-on: macos-latest
-
     steps:
-      # 步骤 1: 检出您的项目代码
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 步骤 2: 设置 Flutter 环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable' # 或者您项目指定的 Flutter 版本
 
-      # 步骤 3: 获取 Flutter 依赖包
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      # 步骤 4: 构建未签名的 .app 文件
-      # 这是关键步骤，使用 --no-codesign 参数
       - name: Build unsigned .app bundle
+        # 这是关键步骤，使用 --no-codesign 参数
         run: flutter build ios --release --no-codesign
 
-      # 步骤 5: 手动打包成 .ipa 文件
-      # a. 创建一个名为 Payload 的文件夹
-      # b. 将构建好的 .app 文件移动到 Payload 文件夹中
-      # c. 使用 zip 命令将 Payload 文件夹压缩成 .ipa 文件
       - name: Package .app into .ipa
         run: |
-          mkdir Payload
-          mv build/ios/iphoneos/Runner.app Payload/
+          mkdir -p Payload
+          mv build/ios/iphoneos/Runner.app Payload/Runner.app
           zip -r re-signable-app.ipa Payload/
 
-      # 步骤 6: 上传构建好的 .ipa 文件作为产物
-      # 您可以在工作流运行结束后下载这个文件
       - name: Upload Re-signable IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: resignable-ipa-build
           path: re-signable-app.ipa
 
-  build_windows:
-    name: Build Windows
+  build_windows_x64:
+    name: Build Windows (x64)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build windows --release
+      - run: flutter build windows --release --target-platform=windows-x64
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-build
+          name: windows-x64-build
           path: build/windows/x64/runner/Release/
+
+  build_windows_arm64:
+    name: Build Windows (ARM64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - name: Build Windows ARM64
+        run: flutter build windows --release --target-platform=windows-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64-build
+          path: build/windows/arm64/runner/Release/
 
   build_macos:
     name: Build macOS
@@ -119,10 +122,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos-build
+          # 使用通配符以匹配可能变化的 .app 名称
           path: build/macos/Build/Products/Release/*.app
 
-  build_linux:
-    name: Build Linux
+  build_linux_x64:
+    name: Build Linux (x64)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -130,8 +134,26 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build linux --release
+      - run: flutter build linux --release --target-platform=linux-x64
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-build
+          name: linux-x64-build
           path: build/linux/x64/release/bundle/
+
+  build_linux_arm64:
+    name: Build Linux (ARM64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Linux ARM64 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev g++-aarch64-linux-gnu
+      - uses: subosito/flutter-action@v2
+      - run: flutter pub get
+      - name: Build Linux ARM64
+        run: flutter build linux --release --target-platform=linux-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64-build
+          path: build/linux/arm64/release/bundle/

@@ -115,7 +115,7 @@ flutter_launcher_icons:
     background_color: "#FFFFFF"
   windows:
     generate: true
-    icon_size: 256
+    icon_size: 64
     background_color: "#FFFFFF"
   macos:
     generate: true

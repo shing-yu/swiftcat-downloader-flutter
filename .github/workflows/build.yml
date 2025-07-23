@@ -1,4 +1,4 @@
-name: Build App
+name: Build Multi-platform Apps
 
 on:
   push:
@@ -8,23 +8,26 @@ on:
   # 允许手动触发工作流
 
 jobs:
+  #-------------------------------------------------
+  # Android (Unchanged, as it builds a universal app)
+  #-------------------------------------------------
   build_android:
     name: Build Android
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin'  # 使用 Adoptium Temurin JDK
+          distribution: 'temurin'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable' # 或指定版本 '3.x.x'
+          channel: 'stable'
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -52,30 +55,31 @@ jobs:
             build/app/outputs/bundle/release/app-release.aab
             build/app/outputs/flutter-apk/app-release.apk
 
+  #-------------------------------------------------
+  # iOS (Unchanged)
+  #-------------------------------------------------
   build_ios:
     name: Build iOS IPA for Re-signing
-    # iOS 构建必须在 macOS 环境下运行
     runs-on: macos-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable' # 或者您项目指定的 Flutter 版本
+          channel: 'stable'
 
       - name: Get Flutter dependencies
         run: flutter pub get
 
       - name: Build unsigned .app bundle
-        # 这是关键步骤，使用 --no-codesign 参数
         run: flutter build ios --release --no-codesign
 
       - name: Package .app into .ipa
         run: |
-          mkdir -p Payload
-          mv build/ios/iphoneos/Runner.app Payload/Runner.app
+          mkdir Payload
+          mv build/ios/iphoneos/Runner.app Payload/
           zip -r re-signable-app.ipa Payload/
 
       - name: Upload Re-signable IPA Artifact
@@ -84,76 +88,86 @@ jobs:
           name: resignable-ipa-build
           path: re-signable-app.ipa
 
+  #-------------------------------------------------
+  # Windows (x64)
+  #-------------------------------------------------
   build_windows_x64:
     name: Build Windows (x64)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build windows --release --target-platform=windows-x64
+      - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-x64-build
+          name: windows-build-x64
           path: build/windows/x64/runner/Release/
 
+  #-------------------------------------------------
+  # Windows (Arm64) - NEW JOB
+  #-------------------------------------------------
   build_windows_arm64:
-    name: Build Windows (ARM64)
-    runs-on: windows-latest
+    name: Build Windows (Arm64)
+    runs-on: windows-latest-arm64 # 使用 Arm64 运行器
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - name: Build Windows ARM64
-        run: flutter build windows --release --target-platform=windows-arm64
+      - run: flutter build windows --release # Flutter 会自动检测 Arm64 环境
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-arm64-build
-          path: build/windows/arm64/runner/Release/
+          name: windows-build-arm64
+          path: build/windows/arm64/runner/Release/ # Arm64 的输出路径
 
+  #-------------------------------------------------
+  # macOS (x64 & Apple Silicon) - Universal Binary
+  #-------------------------------------------------
   build_macos:
-    name: Build macOS
+    name: Build macOS (Universal)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build macos --release
+      - run: flutter build macos --release # Flutter 默认构建 Universal Binary
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-build
-          # 使用通配符以匹配可能变化的 .app 名称
+          name: macos-build-universal
           path: build/macos/Build/Products/Release/*.app
 
+  #-------------------------------------------------
+  # Linux (x64)
+  #-------------------------------------------------
   build_linux_x64:
     name: Build Linux (x64)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install Linux dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - run: flutter build linux --release --target-platform=linux-x64
+      - run: flutter build linux --release
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-x64-build
+          name: linux-build-x64
           path: build/linux/x64/release/bundle/
 
+  #-------------------------------------------------
+  # Linux (Arm64) - NEW JOB
+  #-------------------------------------------------
   build_linux_arm64:
-    name: Build Linux (ARM64)
-    runs-on: ubuntu-latest
+    name: Build Linux (Arm64)
+    runs-on: ubuntu-22.04-arm # 使用 Arm64 运行器 [1]
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Linux ARM64 dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev g++-aarch64-linux-gnu
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
       - uses: subosito/flutter-action@v2
       - run: flutter pub get
-      - name: Build Linux ARM64
-        run: flutter build linux --release --target-platform=linux-arm64
+      - run: flutter build linux --release # Flutter 会自动检测 Arm64 环境
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-arm64-build
-          path: build/linux/arm64/release/bundle/
+          name: linux-build-arm64
+          path: build/linux/arm64/release/bundle/ # Arm64 的输出路径

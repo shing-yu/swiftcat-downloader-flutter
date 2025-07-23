@@ -109,7 +109,7 @@ jobs:
   #-------------------------------------------------
   build_windows_arm64:
     name: Build Windows (Arm64)
-    runs-on: windows-latest-arm64 # 使用 Arm64 运行器
+    runs-on: windows-11-arm  # 使用 Arm64 运行器
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2

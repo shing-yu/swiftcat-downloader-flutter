@@ -104,25 +104,26 @@ jobs:
           name: windows-build-x64
           path: build/windows/x64/runner/Release/
 
+  # Dart SDK is not available for Windows Arm64.
   #-------------------------------------------------
   # Windows (Arm64) - NEW JOB
   #-------------------------------------------------
-  build_windows_arm64:
-    name: Build Windows (Arm64)
-    runs-on: windows-11-arm  # 使用 Arm64 运行器
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'master'
-          flutter-version: '3.32.7'
-      - run: flutter --version
-      - run: flutter pub get
-      - run: flutter build windows --release # Flutter 会自动检测 Arm64 环境
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-build-arm64
-          path: build/windows/arm64/runner/Release/ # Arm64 的输出路径
+  #  build_windows_arm64:
+  #    name: Build Windows (Arm64)
+  #    runs-on: windows-11-arm  # 使用 Arm64 运行器
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - uses: subosito/flutter-action@v2
+  #        with:
+  #          channel: 'master'
+  #          flutter-version: '3.32.7'
+  #      - run: flutter --version
+  #      - run: flutter pub get
+  #      - run: flutter build windows --release # Flutter 会自动检测 Arm64 环境
+  #      - uses: actions/upload-artifact@v4
+  #        with:
+  #          name: windows-build-arm64
+  #          path: build/windows/arm64/runner/Release/ # Arm64 的输出路径
 
   #-------------------------------------------------
   # macOS (x64 & Apple Silicon) - Universal Binary

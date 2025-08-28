@@ -1,5 +1,4 @@
 // lib/models/book.dart
-import 'package:flutter/foundation.dart';
 
 // --- 新增的辅助函数 ---
 // 这个函数能安全地将任何动态类型的值转换为整数。

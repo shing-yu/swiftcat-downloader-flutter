@@ -85,3 +85,32 @@ class BookChapter {
     );
   }
 }
+
+class SearchResultBook {
+  final String id;
+  final String title;
+  final String author;
+  final bool isOver;
+
+  SearchResultBook({
+    required this.id,
+    required this.title,
+    required this.author,
+    required this.isOver,
+  });
+
+  factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
+    // Helper function to remove HTML tags
+    String _removeHtmlTags(String htmlText) {
+      RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
+      return htmlText.replaceAll(exp, '');
+    }
+
+    return SearchResultBook(
+      id: json['id']?.toString() ?? '',
+      title: _removeHtmlTags(json['title'] ?? '无书名'),
+      author: _removeHtmlTags(json['author'] ?? '未知作者'),
+      isOver: json['is_over'] == '1',
+    );
+  }
+}

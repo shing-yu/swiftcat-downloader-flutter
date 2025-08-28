@@ -40,6 +40,36 @@ class ApiClient {
     return headers;
   }
 
+  Future<List<SearchResultBook>> searchBooks(String keyword) async {
+    final params = {
+      'extend': '',
+      'tab': '0',
+      'gender': '0',
+      'refresh_state': '8',
+      'page': '1',
+      'wd': keyword,
+      'is_short_story_user': '0'
+    };
+    params['sign'] = _generateSignature(params, _signKey);
+
+    final response = await _dio.get(
+      "$_baseUrlBc/search/v1/words",
+      queryParameters: params,
+      options: Options(headers: _getHeaders('00000000')),
+    );
+
+    if (response.statusCode == 200 && response.data['data'] != null) {
+      List<dynamic> books = response.data['data']['books'] ?? [];
+      return books
+          .where((json) =>
+              json['id'] != null && json['id'].toString().isNotEmpty)
+          .map((json) => SearchResultBook.fromSearchJson(json))
+          .toList();
+    } else {
+      throw Exception('搜索失败: ${response.data['message']}');
+    }
+  }
+
   Future<Book> fetchBookInfo(String bookId) async {
     final params = {'id': bookId, 'imei_ip': '2937357107', 'teeny_mode': '0'};
     params['sign'] = _generateSignature(params, _signKey);

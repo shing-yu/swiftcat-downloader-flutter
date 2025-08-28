@@ -5,9 +5,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/search_provider.dart';
 import '../widgets/book_detail_view.dart';
 import '../widgets/responsive_layout.dart';
 import '../widgets/status_bar.dart';
+import '../widgets/search_result_view.dart';
 import '../../globals.dart';
 
 String? _parseBookIdInput(String input) {
@@ -45,51 +47,53 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final searchController = TextEditingController();
 
+    ref.listen<SearchState>(searchProvider, (previous, next) {
+      final isMobile = MediaQuery.of(context).size.width < 600;
+      if (isMobile && (previous?.isLoading ?? false) && !next.isLoading) {
+        showDialog(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('搜索结果'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: SearchResultView(
+                onResultSelected: () {
+                  Navigator.of(dialogContext).pop();
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('关闭'),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+              ),
+            ],
+          ),
+        );
+      }
+    });
+
     // --- 核心修改点: 重构 performSearch 方法 ---
     void performSearch() {
       final rawInput = searchController.text.trim();
       if (rawInput.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请输入小说ID或链接')),
+          const SnackBar(content: Text('请输入小说ID、链接或关键词')),
         );
         return;
       }
 
-      // 调用解析函数
       final String? parsedId = _parseBookIdInput(rawInput);
 
-      // 根据解析结果执行操作
       if (parsedId != null) {
-        // --- 逻辑分支 1 & 2: 成功解析 ---
-
-        // 如果解析出的ID与原始输入不同（说明是从URL中提取的），则更新输入框
         if (parsedId != rawInput) {
           searchController.text = parsedId;
         }
-
-        // 使用干净的ID执行搜索
         ref.read(bookProvider.notifier).fetchBook(parsedId);
-
+        ref.read(searchProvider.notifier).clearSearch();
       } else {
-        // --- 逻辑分支 3: 解析失败 ---
-
-        // 弹窗报错
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('输入无效'),
-            content: const Text('请输入纯数字ID或有效的七猫小说链接。'),
-            actions: [
-              TextButton(
-                child: const Text('确定'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        );
-
-        // 清除输入框内容
-        searchController.clear();
+        ref.read(searchKeywordProvider.notifier).state = rawInput;
+        ref.read(searchProvider.notifier).searchBooks(rawInput);
       }
     }
 
@@ -99,11 +103,10 @@ class HomeScreen extends ConsumerWidget {
       child: TextField(
         controller: searchController,
         decoration: InputDecoration(
-          labelText: '小说ID',
-          hintText: '在此输入七猫小说ID',
-          // 设置所有边框状态的圆角
+          labelText: '搜索',
+          hintText: '输入小说ID、链接或关键词',
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24.0), // 从默认值增大
+            borderRadius: BorderRadius.circular(24.0),
           ),
           suffixIcon: IconButton(
             icon: const Icon(Icons.search),
@@ -212,14 +215,9 @@ class HomeScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         searchBar,
-                        // 可以在这里添加搜索历史或推荐列表
-                        const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Text(
-                            '输入小说ID后，详细信息将显示在右侧。',
-                            textAlign: TextAlign.center,
-                          ),
-                        )
+                        const Expanded(
+                          child: SearchResultView(),
+                        ),
                       ],
                     ),
                   ),

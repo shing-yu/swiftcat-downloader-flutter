@@ -14,8 +14,8 @@
 - [x] 极快的下载速度
 - [x] 漂亮的用户界面
 - [x] 全平台支持*
+- [x] 通过书名搜索小说
 - [ ] 下载为EPUB格式
-- [ ] 通过书名搜索小说
 
 *按章节保存支持平台：Android、iOS、macOS、Windows、Linux  
 *全平台支持：Android、iOS、macOS、Windows、Linux、Web

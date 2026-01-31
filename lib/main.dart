@@ -7,10 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 初始化全局信息
-  await initGlobalPackageInfo();
+    await initGlobalPackageInfo();
   
-  // 注意：已移除导致编译错误的 setPreferredFrameRate 等代码
   runApp(const MyApp());
 }
 

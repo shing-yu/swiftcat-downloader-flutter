@@ -1,15 +1,11 @@
-// lib/models/book.dart
 
-// --- 新增的辅助函数 ---
-// 这个函数能安全地将任何动态类型的值转换为整数。
 int _parseInt(dynamic value) {
   if (value == null) return 0;
   if (value is int) return value;
   if (value is String) {
     return int.tryParse(value) ?? 0;
   }
-  // 如果是其他类型（如 double），可以先转为数字再取整
-  if (value is num) {
+    if (value is num) {
     return value.toInt();
   }
   return 0;
@@ -42,13 +38,10 @@ class Book {
     List<dynamic> tagList = bookData['book_tag_list'] ?? [];
 
     return Book(
-      // --- 这里是修改点 ---
-      bookId: bookData['id']?.toString() ?? '', // 确保ID即使为null也不会崩溃
-      title: bookData['title'] ?? '未知标题',
+            bookId: bookData['id']?.toString() ?? '',       title: bookData['title'] ?? '未知标题',
       author: bookData['author'] ?? '未知作者',
       intro: bookData['intro'] ?? '暂无简介',
-      // --- 使用了安全的解析函数 ---
-      wordsNum: _parseInt(bookData['words_num']),
+            wordsNum: _parseInt(bookData['words_num']),
       tags: tagList.map((tag) => tag['title']).join(', '),
       imgUrl: bookData['image_link'] ?? '',
     );
@@ -56,13 +49,13 @@ class Book {
 
   Book copyWith({List<BookChapter>? catalog}) {
     return Book(
-      bookId: bookId,      // 移除 this.
-      title: title,        // 移除 this.
-      author: author,      // 移除 this.
-      intro: intro,        // 移除 this.
-      wordsNum: wordsNum,  // 移除 this.
-      tags: tags,          // 移除 this.
-      imgUrl: imgUrl,      // 移除 this.
+      bookId: bookId,
+      title: title,
+      author: author,
+      intro: intro,
+      wordsNum: wordsNum,
+      tags: tags,
+      imgUrl: imgUrl,
       catalog: catalog ?? this.catalog,
     );
   }
@@ -77,11 +70,9 @@ class BookChapter {
 
   factory BookChapter.fromJson(Map<String, dynamic> json) {
     return BookChapter(
-      // --- 这里是修改点 ---
-      id: json['id']?.toString() ?? '',
+            id: json['id']?.toString() ?? '',
       title: json['title'] ?? '未知章节',
-      // --- 使用了安全的解析函数 ---
-      sort: _parseInt(json['chapter_sort']),
+            sort: _parseInt(json['chapter_sort']),
     );
   }
 }
@@ -99,10 +90,8 @@ class SearchResultBook {
     required this.isOver,
   });
 
-  // 替换 SearchResultBook.fromSearchJson 工厂构造函数内的 _removeHtmlTags 函数
-  factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
-    // Helper function to remove HTML tags
-    String removeHtmlTags(String htmlText) {
+    factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
+        String removeHtmlTags(String htmlText) {
       RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
       return htmlText.replaceAll(exp, '');
     }

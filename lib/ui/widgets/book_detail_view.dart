@@ -162,7 +162,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    // === 关键修复：监听器必须放在 build 方法内部 ===
     ref.listen<DownloadState>(downloadProvider, (previous, next) {
       if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
         if (_lastDownloadedPath != null) {
@@ -217,7 +216,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         );
       }
     });
-    // === 监听器修复结束 ===
 
     final bookState = ref.watch(bookProvider);
     final book = bookState.book;
@@ -318,16 +316,14 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                  // ignore: deprecated_member_use
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
                   width: 1.0,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                  // ignore: deprecated_member_use
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
                   width: 1.0,
                 ),
               ),

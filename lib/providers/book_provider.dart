@@ -1,14 +1,11 @@
-// lib/providers/book_provider.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/api_client.dart';
 import '../models/book.dart';
 import '../core/book_downloader.dart';
 
-// API Client 的单例 Provider
 final apiClientProvider = Provider((ref) => ApiClient());
 
-// --- 书籍信息状态 ---
 class BookState {
   final Book? book;
   final bool isLoading;
@@ -51,13 +48,11 @@ final bookProvider = StateNotifierProvider<BookNotifier, BookState>((ref) {
 });
 
 
-// --- 下载状态 ---
 class DownloadState {
   final bool isDownloading;
   final double progress;
   final String status;
-  final Uint8List? data; // 新增：用于在Web平台存储下载的文件字节
-
+  final Uint8List? data; 
   DownloadState({
     this.isDownloading = false,
     this.progress = 0.0,
@@ -70,8 +65,7 @@ class DownloadState {
     double? progress,
     String? status,
     Uint8List? data,
-    bool clearData = false, // 新增：用于强制清除数据
-  }) {
+    bool clearData = false,   }) {
     return DownloadState(
       isDownloading: isDownloading ?? this.isDownloading,
       progress: progress ?? this.progress,
@@ -85,8 +79,7 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   final BookDownloader _downloader;
   DownloadNotifier(this._downloader) : super(DownloadState());
 
-  // --- 新增: 清理下载数据的方法 ---
-  void clearDownloadData() {
+    void clearDownloadData() {
     if (state.data != null) {
       state = state.copyWith(clearData: true);
     }
@@ -99,25 +92,21 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   }) async {
     if (state.isDownloading) return;
 
-    // 重置数据字段，开始新的下载
-    state = DownloadState(isDownloading: true, status: '开始下载...');
+        state = DownloadState(isDownloading: true, status: '开始下载...');
 
     try {
       if (kIsWeb) {
-        // --- Web 平台逻辑 ---
-        final fileData = await _downloader.downloadBookForWeb(
+                final fileData = await _downloader.downloadBookForWeb(
           book: book,
           format: format,
           onStatusUpdate: (status) => state = state.copyWith(status: status),
           onProgressUpdate: (progress) =>
               state = state.copyWith(progress: progress),
         );
-        // 下载成功后，将文件数据存入 state
-        state = state.copyWith(
+                state = state.copyWith(
             isDownloading: false, status: '下载成功！', data: fileData);
       } else {
-        // --- 原生平台逻辑 ---
-        await _downloader.downloadBook(
+                await _downloader.downloadBook(
           book: book,
           format: format,
           savePath: savePath,

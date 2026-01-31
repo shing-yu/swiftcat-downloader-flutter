@@ -46,7 +46,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // === 关键修复：监听器必须放在 build 方法内部 ===
     ref.listen<SearchState>(searchProvider, (previous, next) {
       final isMobile = MediaQuery.of(context).size.width < 600;
       if (isMobile && (previous?.isLoading ?? false) && !next.isLoading) {
@@ -73,7 +72,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       }
     });
-    // === 监听器修复结束 ===
 
     void performSearch() {
       final rawInput = _searchController.text.trim();
@@ -222,10 +220,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: _isDividerHovered
-                            // ignore: deprecated_member_use
-                            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-                            // ignore: deprecated_member_use
-                            : Theme.of(context).dividerColor.withOpacity(0.5),
+                                                        ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                                                        : Theme.of(context).dividerColor.withOpacity(0.5),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
@@ -88,7 +88,7 @@ class BookDownloader {
       return fileData;
     } catch (e) {
       onStatusUpdate('下载失败: $e');
-      print('Web download failed: $e');
+      debugPrint('Web download failed: $e');
       rethrow;
     }
   }
@@ -180,7 +180,7 @@ class BookDownloader {
     } catch (e) {
       onStatusUpdate('下载失败: $e');
       // 如果需要，可以在这里添加更详细的日志记录
-      print('Download failed: $e');
+      debugPrint('Download failed: $e');
       rethrow;
     } finally {
       // 确保临时文件夹最后一定会被清理

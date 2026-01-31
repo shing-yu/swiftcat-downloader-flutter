@@ -56,13 +56,13 @@ class Book {
 
   Book copyWith({List<BookChapter>? catalog}) {
     return Book(
-      bookId: this.bookId,
-      title: this.title,
-      author: this.author,
-      intro: this.intro,
-      wordsNum: this.wordsNum,
-      tags: this.tags,
-      imgUrl: this.imgUrl,
+      bookId: bookId,      // 移除 this.
+      title: title,        // 移除 this.
+      author: author,      // 移除 this.
+      intro: intro,        // 移除 this.
+      wordsNum: wordsNum,  // 移除 this.
+      tags: tags,          // 移除 this.
+      imgUrl: imgUrl,      // 移除 this.
       catalog: catalog ?? this.catalog,
     );
   }
@@ -99,17 +99,18 @@ class SearchResultBook {
     required this.isOver,
   });
 
+  // 替换 SearchResultBook.fromSearchJson 工厂构造函数内的 _removeHtmlTags 函数
   factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
     // Helper function to remove HTML tags
-    String _removeHtmlTags(String htmlText) {
+    String removeHtmlTags(String htmlText) {
       RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
       return htmlText.replaceAll(exp, '');
     }
 
     return SearchResultBook(
       id: json['id']?.toString() ?? '',
-      title: _removeHtmlTags(json['title'] ?? '无书名'),
-      author: _removeHtmlTags(json['author'] ?? '未知作者'),
+      title: removeHtmlTags(json['title'] ?? '无书名'),
+      author: removeHtmlTags(json['author'] ?? '未知作者'),
       isOver: json['is_over'] == '1',
     );
   }

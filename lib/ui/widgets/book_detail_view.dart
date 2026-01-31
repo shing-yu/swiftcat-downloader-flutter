@@ -8,7 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_saver/file_saver.dart';
-import 'package:device_info_plus/device_info_plus.dart'; // 新增: 用于获取设备信息
+import 'package:device_info_plus/device_info_plus.dart';
 
 import '../../core/book_downloader.dart';
 import '../../models/book.dart';
@@ -16,7 +16,6 @@ import '../../providers/book_provider.dart';
 
 final bool isAndroid = !kIsWeb && Platform.isAndroid;
 final bool isIOS = !kIsWeb && Platform.isIOS;
-
 
 class BookDetailView extends ConsumerStatefulWidget {
   const BookDetailView({super.key});
@@ -28,6 +27,7 @@ class BookDetailView extends ConsumerStatefulWidget {
 class _BookDetailViewState extends ConsumerState<BookDetailView> {
   DownloadFormat _selectedFormat = DownloadFormat.singleTxt;
   String? _lastDownloadedPath;
+  bool _isImageHovered = false;
 
   Future<String?> _getMobileDownloadsDirectory() async {
     Directory? directory;
@@ -55,6 +55,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     try {
       if (kIsWeb) {
         if (_selectedFormat == DownloadFormat.chapterTxt) {
+          if (!mounted) return;
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -76,17 +77,15 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       } else if (isAndroid || isIOS) {
         var hasPermission = true;
         if (isAndroid) {
-          // --- 修改点: 根据安卓版本请求权限 ---
           final deviceInfo = await DeviceInfoPlugin().androidInfo;
           PermissionStatus status;
 
-          // Android 11 (API 30) 或更高版本
           if (deviceInfo.version.sdkInt >= 30) {
             status = await Permission.manageExternalStorage.status;
             if (!status.isGranted) {
               status = await Permission.manageExternalStorage.request();
             }
-          } else { // Android 10 (API 29) 或更低版本
+          } else {
             status = await Permission.storage.status;
             if (!status.isGranted) {
               status = await Permission.storage.request();
@@ -105,7 +104,6 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
               outputPath = '$downloadsPath/$fileName.$extension';
             }
-            // --- 已移除: 不再调用 _getUniqueFilePath ---
           } else {
             throw Exception("无法获取下载目录。");
           }
@@ -164,6 +162,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    // === 关键修复：监听器必须放在 build 方法内部 ===
     ref.listen<DownloadState>(downloadProvider, (previous, next) {
       if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
         if (_lastDownloadedPath != null) {
@@ -184,6 +183,8 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
             ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('下载完成: $path'),
+                  duration: const Duration(seconds: 6),
+                  behavior: SnackBarBehavior.floating,
                   action: _selectedFormat != DownloadFormat.chapterTxt
                       ? SnackBarAction(
                     label: '打开',
@@ -200,6 +201,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
     ref.listen<BookState>(bookProvider, (previous, next) {
       if (next.error != null && previous?.error == null) {
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -215,6 +217,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         );
       }
     });
+    // === 监听器修复结束 ===
 
     final bookState = ref.watch(bookProvider);
     final book = bookState.book;
@@ -245,15 +248,31 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (book.imgUrl.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      book.imgUrl,
+                  MouseRegion(
+                    onEnter: (_) => setState(() => _isImageHovered = true),
+                    onExit: (_) => setState(() => _isImageHovered = false),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
                       width: 120,
                       height: 160,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.book, size: 120),
+                      transform: Matrix4.identity().scaled(_isImageHovered ? 1.05 : 1.0),
+                      transformAlignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: _isImageHovered ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ] : null,
+                        image: DecorationImage(
+                          fit: BoxFit.cover,
+                          image: NetworkImage(book.imgUrl),
+                          onError: (exception, stackTrace) => const Icon(Icons.book, size: 120),
+                        ),
+                      ),
                     ),
                   ),
                 const SizedBox(width: 16),
@@ -294,11 +313,12 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         SizedBox(
           width: 150,
           child: DropdownButtonFormField<DownloadFormat>(
-            value: _selectedFormat,
+            initialValue: _selectedFormat,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
+                  // ignore: deprecated_member_use
                   color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
                   width: 1.0,
                 ),
@@ -306,11 +326,12 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
+                  // ignore: deprecated_member_use
                   color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
                   width: 1.0,
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
             ),
             dropdownColor: Theme.of(context).colorScheme.surface,
             items: [

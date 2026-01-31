@@ -11,6 +11,7 @@ import '../widgets/status_bar.dart';
 import '../widgets/search_result_view.dart';
 import '../../globals.dart';
 
+// 解析用户输入，提取书籍ID（支持纯数字、七猫URL、wtzw URL）
 String? _parseBookIdInput(String input) {
   final pureDigitsRegex = RegExp(r'^\d+$');
   final qimaoUrlRegex = RegExp(r'www\.qimao\.com/shuku/(\d+)');
@@ -33,6 +34,7 @@ String? _parseBookIdInput(String input) {
   return null;
 }
 
+// 主屏幕，包含搜索栏、书籍详情、搜索结果等
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -42,10 +44,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isDividerHovered = false;
+  bool _isDividerHovered = false; // 用于桌面分隔条悬停效果
 
   @override
   Widget build(BuildContext context) {
+    // 监听搜索状态变化，在移动端显示搜索结果对话框
     ref.listen<SearchState>(searchProvider, (previous, next) {
       final isMobile = MediaQuery.of(context).size.width < 600;
       if (isMobile && (previous?.isLoading ?? false) && !next.isLoading) {
@@ -73,6 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
+    // 执行搜索：根据输入内容判断是书籍ID还是关键词
     void performSearch() {
       final rawInput = _searchController.text.trim();
       if (rawInput.isEmpty) {
@@ -85,17 +89,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final String? parsedId = _parseBookIdInput(rawInput);
 
       if (parsedId != null) {
+        // 输入是书籍ID或URL，获取书籍详情
         if (parsedId != rawInput) {
           _searchController.text = parsedId;
         }
         ref.read(bookProvider.notifier).fetchBook(parsedId);
         ref.read(searchProvider.notifier).clearSearch();
       } else {
+        // 输入是关键词，执行搜索
         ref.read(searchKeywordProvider.notifier).state = rawInput;
         ref.read(searchProvider.notifier).searchBooks(rawInput);
       }
     }
 
+    // 搜索栏组件
     final searchBar = Padding(
       padding: const EdgeInsets.all(16.0),
       child: TextField(
@@ -122,6 +129,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('灵猫小说下载器'),
         elevation: 2,
         actions: [
+          // 主题切换按钮
           IconButton(
             icon: Icon(
                 currentBrightness == Brightness.dark
@@ -133,6 +141,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.read(themeProvider.notifier).toggleTheme(currentBrightness);
             },
           ),
+          // 关于对话框按钮
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: '关于',
@@ -187,6 +196,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Expanded(
             child: ResponsiveLayout(
+              // 移动端布局：搜索栏 + 书籍详情
               mobileBody: SingleChildScrollView(
                 child: Column(
                   children: [
@@ -195,6 +205,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ),
+              // 桌面端布局：左侧搜索结果 + 分隔条 + 右侧书籍详情
               desktopBody: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -209,6 +220,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
+                  // 可交互的分隔条（悬停效果）
                   MouseRegion(
                     onEnter: (_) => setState(() => _isDividerHovered = true),
                     onExit: (_) => setState(() => _isDividerHovered = false),
@@ -236,7 +248,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-          const StatusBar(),
+          const StatusBar(), // 底部状态栏
         ],
       ),
     );

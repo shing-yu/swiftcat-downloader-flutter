@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// 响应式布局组件，根据屏幕宽度切换移动端/桌面端布局
 class ResponsiveLayout extends StatelessWidget {
   final Widget mobileBody;
   final Widget desktopBody;
@@ -15,9 +16,9 @@ class ResponsiveLayout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
-          return mobileBody;
+          return mobileBody; // 移动端布局
         } else {
-          return desktopBody;
+          return desktopBody; // 桌面端布局
         }
       },
     );

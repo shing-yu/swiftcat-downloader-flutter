@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_provider.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 
-
+// 底部状态栏，显示下载状态和进度
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});
 

@@ -14,9 +14,11 @@ import '../../core/book_downloader.dart';
 import '../../models/book.dart';
 import '../../providers/book_provider.dart';
 
+// 平台检测常量
 final bool isAndroid = !kIsWeb && Platform.isAndroid;
 final bool isIOS = !kIsWeb && Platform.isIOS;
 
+// 书籍详情视图，显示书籍信息并提供下载功能
 class BookDetailView extends ConsumerStatefulWidget {
   const BookDetailView({super.key});
 

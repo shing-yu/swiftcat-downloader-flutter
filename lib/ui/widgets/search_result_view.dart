@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/search_provider.dart';
 
+// 搜索结果视图，显示搜索到的书籍列表
 class SearchResultView extends ConsumerWidget {
   final VoidCallback? onResultSelected;
   const SearchResultView({super.key, this.onResultSelected});
@@ -90,5 +91,7 @@ class SearchResultView extends ConsumerWidget {
   }
 }
 
+// 选中的书籍ID提供者
 final selectedBookIdProvider = StateProvider<String?>((ref) => null);
+// 搜索关键词提供者
 final searchKeywordProvider = StateProvider<String>((ref) => '');

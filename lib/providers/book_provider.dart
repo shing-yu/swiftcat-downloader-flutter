@@ -4,8 +4,10 @@ import '../core/api_client.dart';
 import '../models/book.dart';
 import '../core/book_downloader.dart';
 
+// API客户端提供者（单例）
 final apiClientProvider = Provider((ref) => ApiClient());
 
+// 书籍状态，用于管理当前选中的书籍信息
 class BookState {
   final Book? book;
   final bool isLoading;
@@ -13,6 +15,7 @@ class BookState {
 
   BookState({this.book, this.isLoading = false, this.error});
 
+  // 复制并更新状态
   BookState copyWith({Book? book, bool? isLoading, String? error, bool clearError = false}) {
     return BookState(
       book: book ?? this.book,
@@ -22,10 +25,12 @@ class BookState {
   }
 }
 
+// 书籍状态管理器，负责获取书籍信息和章节列表
 class BookNotifier extends StateNotifier<BookState> {
   final ApiClient _apiClient;
   BookNotifier(this._apiClient) : super(BookState());
 
+  // 根据书籍ID获取完整书籍信息（包括目录）
   Future<void> fetchBook(String bookId) async {
     state = BookState(isLoading: true);
     try {
@@ -38,21 +43,24 @@ class BookNotifier extends StateNotifier<BookState> {
     }
   }
 
+  // 清空当前书籍状态
   void clear() {
     state = BookState();
   }
 }
 
+// 书籍状态提供者
 final bookProvider = StateNotifierProvider<BookNotifier, BookState>((ref) {
   return BookNotifier(ref.watch(apiClientProvider));
 });
 
 
+// 下载状态，用于管理下载进度和结果
 class DownloadState {
   final bool isDownloading;
   final double progress;
   final String status;
-  final Uint8List? data; 
+  final Uint8List? data; // Web平台下载的文件数据
   DownloadState({
     this.isDownloading = false,
     this.progress = 0.0,
@@ -60,6 +68,7 @@ class DownloadState {
     this.data,
   });
 
+  // 复制并更新状态
   DownloadState copyWith({
     bool? isDownloading,
     double? progress,
@@ -75,16 +84,19 @@ class DownloadState {
   }
 }
 
+// 下载状态管理器，负责启动下载并更新进度
 class DownloadNotifier extends StateNotifier<DownloadState> {
   final BookDownloader _downloader;
   DownloadNotifier(this._downloader) : super(DownloadState());
 
-    void clearDownloadData() {
+  // 清除已下载的数据（Web平台）
+  void clearDownloadData() {
     if (state.data != null) {
       state = state.copyWith(clearData: true);
     }
   }
 
+  // 启动下载，根据平台调用不同的下载方法
   Future<void> startDownload({
     required Book book,
     required DownloadFormat format,
@@ -92,21 +104,23 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   }) async {
     if (state.isDownloading) return;
 
-        state = DownloadState(isDownloading: true, status: '开始下载...');
+    state = DownloadState(isDownloading: true, status: '开始下载...');
 
     try {
       if (kIsWeb) {
-                final fileData = await _downloader.downloadBookForWeb(
+        // Web平台：使用downloadBookForWeb，返回字节数据
+        final fileData = await _downloader.downloadBookForWeb(
           book: book,
           format: format,
           onStatusUpdate: (status) => state = state.copyWith(status: status),
           onProgressUpdate: (progress) =>
               state = state.copyWith(progress: progress),
         );
-                state = state.copyWith(
+        state = state.copyWith(
             isDownloading: false, status: '下载成功！', data: fileData);
       } else {
-                await _downloader.downloadBook(
+        // 桌面/移动平台：使用downloadBook，保存到文件系统
+        await _downloader.downloadBook(
           book: book,
           format: format,
           savePath: savePath,
@@ -123,6 +137,7 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   }
 }
 
+// 下载状态提供者
 final downloadProvider =
     StateNotifierProvider<DownloadNotifier, DownloadState>((ref) {
   final apiClient = ref.watch(apiClientProvider);

@@ -3,27 +3,32 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:encrypt/encrypt.dart' as encrypt;
-import 'package:swiftcat_downloader/models/book.dart'; 
-class ApiClient {
-  static const _signKey = 'd3dGiJc651gSQ8w1';
-  static const _aesKeyHex = '32343263636238323330643730396531';
-  static const _baseUrlBc = "https://api-bc.wtzw.com";
-  static const _baseUrlKs = "https://api-ks.wtzw.com";
+import 'package:swiftcat_downloader/models/book.dart';
 
+// API客户端，处理与小说服务器的网络请求
+class ApiClient {
+  static const _signKey = 'd3dGiJc651gSQ8w1'; // 签名密钥
+  static const _aesKeyHex = '32343263636238323330643730396531'; // AES解密密钥
+  static const _baseUrlBc = "https://api-bc.wtzw.com"; // 主API域名
+  static const _baseUrlKs = "https://api-ks.wtzw.com"; // 章节API域名
+
+  // 支持的App版本列表，用于随机选择以模拟真实请求
   static const _versionList = [
     '73720', '73700', '73620', '73600', '73500', '73420', '73400',
     '73328', '73325', '73320', '73300', '73220', '73200', '73100',
     '73000', '72900', '72820', '72800', '70720', '62010', '62112',
   ];
 
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(); // HTTP客户端实例
 
+  // 生成API请求所需的MD5签名
   String _generateSignature(Map<String, dynamic> params, String key) {
     var sortedKeys = params.keys.toList()..sort();
     var signStr = sortedKeys.map((k) => '$k=${params[k]}').join('') + key;
     return md5.convert(utf8.encode(signStr)).toString();
   }
 
+  // 构造请求头，包含随机版本号并计算签名
   Map<String, dynamic> _getHeaders(String bookId) {
     final random = Random(bookId.hashCode);
     final version = _versionList[random.nextInt(_versionList.length)];
@@ -38,6 +43,7 @@ class ApiClient {
     return headers;
   }
 
+  // 搜索书籍
   Future<List<SearchResultBook>> searchBooks(String keyword) async {
     final params = {
       'extend': '',
@@ -68,6 +74,7 @@ class ApiClient {
     }
   }
 
+  // 获取书籍详细信息
   Future<Book> fetchBookInfo(String bookId) async {
     final params = {'id': bookId, 'imei_ip': '2937357107', 'teeny_mode': '0'};
     params['sign'] = _generateSignature(params, _signKey);
@@ -85,6 +92,7 @@ class ApiClient {
     }
   }
 
+  // 获取书籍章节列表
   Future<List<BookChapter>> fetchChapterList(String bookId) async {
     final params = {'chapter_ver': '0', 'id': bookId};
     params['sign'] = _generateSignature(params, _signKey);
@@ -104,6 +112,7 @@ class ApiClient {
     }
   }
 
+  // 获取缓存ZIP下载链接
   Future<String> getCacheZipLink(String bookId) async {
     final params = {'id': bookId, 'source': 1, 'type': 2, 'is_vip': 1};
     params['sign'] = _generateSignature(params, _signKey);
@@ -121,6 +130,7 @@ class ApiClient {
     }
   }
 
+  // 解密章节内容（AES-CBC）
   String decryptChapterContent(String encryptedContent) {
     final key = encrypt.Key.fromBase16(_aesKeyHex);
 

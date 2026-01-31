@@ -11,7 +11,7 @@ import '../widgets/status_bar.dart';
 import '../widgets/search_result_view.dart';
 import '../../globals.dart';
 
-// 解析用户输入，提取书籍ID（支持纯数字、七猫URL、wtzw URL）
+// 解析用户输入，提取书籍ID（支持纯数字、七猫URL、分享URL）
 String? _parseBookIdInput(String input) {
   final pureDigitsRegex = RegExp(r'^\d+$');
   final qimaoUrlRegex = RegExp(r'www\.qimao\.com/shuku/(\d+)');

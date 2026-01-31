@@ -48,33 +48,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 监听搜索状态变化，在移动端显示搜索结果对话框
-    ref.listen<SearchState>(searchProvider, (previous, next) {
-      final isMobile = MediaQuery.of(context).size.width < 600;
-      if (isMobile && (previous?.isLoading ?? false) && !next.isLoading) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('搜索结果'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SearchResultView(
-                onResultSelected: () {
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('关闭'),
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
-            ],
-          ),
-        );
-      }
-    });
 
     // 执行搜索：根据输入内容判断是书籍ID还是关键词
     void performSearch() {
@@ -123,9 +96,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
 
     final Brightness currentBrightness = Theme.of(context).brightness;
+    final selectedBookId = ref.watch(selectedBookIdProvider);
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final hideAppBar = isMobile && selectedBookId != null;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: hideAppBar ? null : AppBar(
         title: const Text('灵猫小说下载器'),
         elevation: 2,
         actions: [
@@ -196,14 +172,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Expanded(
             child: ResponsiveLayout(
-              // 移动端布局：搜索栏 + 书籍详情
-              mobileBody: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    searchBar,
-                    const BookDetailView(),
-                  ],
-                ),
+              // 移动端布局：根据状态显示搜索结果列表或书籍详情
+              mobileBody: Consumer(
+                builder: (context, ref, child) {
+                  final selectedBookId = ref.watch(selectedBookIdProvider);
+                  final searchState = ref.watch(searchProvider);
+                  
+                  // 如果已选择书籍（无论是否已加载），显示书籍详情（不含搜索栏）
+                  if (selectedBookId != null) {
+                    return Column(
+                      children: [
+                        // 返回按钮栏
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back),
+                                onPressed: () {
+                                  ref.read(selectedBookIdProvider.notifier).state = null;
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('返回搜索结果', style: TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: const BookDetailView(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  // 如果有搜索结果，显示搜索结果列表
+                  else if (searchState.searchResults.isNotEmpty) {
+                    return Column(
+                      children: [
+                        searchBar,
+                        Expanded(
+                          child: SearchResultView(
+                            onResultSelected: () {
+                              // 当选择结果后，可以滚动到详情视图（通过设置 selectedBookId）
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  // 默认显示书籍详情（空白状态）
+                  else {
+                    return Column(
+                      children: [
+                        searchBar,
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: const BookDetailView(),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
               ),
               // 桌面端布局：左侧搜索结果 + 分隔条 + 右侧书籍详情
               desktopBody: Row(

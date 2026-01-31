@@ -37,7 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   # 状态管理
-  flutter_riverpod: ^2.4.9     # 用于状态管理
+  flutter_riverpod: ^3.2.0     # 用于状态管理
 
   # 网络与数据处理
   dio: ^5.4.0                  # 功能强大的 HTTP 客户端
@@ -57,8 +57,8 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0 # 用于创建复杂的响应式网格布局
   window_size: ^0.1.0
   url_launcher: ^6.0.0
-  package_info_plus: ^8.3.0
-  device_info_plus: ^11.5.0
+  package_info_plus: ^9.0.0
+  device_info_plus: ^12.3.0
 
 dev_dependencies:
   flutter_test:

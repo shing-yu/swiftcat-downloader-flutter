@@ -46,27 +46,43 @@ class SearchResultView extends ConsumerWidget {
               final book = searchState.searchResults[index];
               final status = book.isOver ? '完结' : '连载中';
               
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
+              // 使用Card来包裹每个列表项，避免状态混淆
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                elevation: 1,
                 child: ListTile(
-                  key: ValueKey(book.id),
+                  key: ValueKey(book.id), // 确保每个项目有唯一key
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('《${book.title}》'),
+                      Text(
+                        '《${book.title}》',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: selectedBookId == book.id 
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
                       Text(
                         book.author,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       Text(
                         status,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: status == '完结' 
+                              ? Colors.green 
+                              : Colors.orange,
+                        ),
                       ),
                     ],
                   ),
-                  // 简化：使用选中状态而不是 Radio
-                  tileColor: selectedBookId == book.id
-                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                  // 使用正确的选中状态背景色（10% 不透明度）
+                  selected: selectedBookId == book.id,
+                  selectedTileColor: selectedBookId == book.id
+                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
                       : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

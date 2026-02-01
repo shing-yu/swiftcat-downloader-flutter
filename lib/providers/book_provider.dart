@@ -26,16 +26,20 @@ class BookState {
 }
 
 // 书籍状态管理器，负责获取书籍信息和章节列表
-class BookNotifier extends StateNotifier<BookState> {
-  final ApiClient _apiClient;
-  BookNotifier(this._apiClient) : super(BookState());
+class BookNotifier extends Notifier<BookState> {
+  @override
+  BookState build() {
+    // 初始化状态
+    return BookState();
+  }
 
   // 根据书籍ID获取完整书籍信息（包括目录）
   Future<void> fetchBook(String bookId) async {
-    state = BookState(isLoading: true);
+    state = state.copyWith(isLoading: true);
     try {
-      final bookInfo = await _apiClient.fetchBookInfo(bookId);
-      final chapters = await _apiClient.fetchChapterList(bookId);
+      final apiClient = ref.read(apiClientProvider);
+      final bookInfo = await apiClient.fetchBookInfo(bookId);
+      final chapters = await apiClient.fetchChapterList(bookId);
       final fullBook = bookInfo.copyWith(catalog: chapters);
       state = BookState(book: fullBook);
     } catch (e) {
@@ -49,11 +53,8 @@ class BookNotifier extends StateNotifier<BookState> {
   }
 }
 
-// 书籍状态提供者
-final bookProvider = StateNotifierProvider<BookNotifier, BookState>((ref) {
-  return BookNotifier(ref.watch(apiClientProvider));
-});
-
+// 书籍状态提供者 (Riverpod 3.0 语法)
+final bookProvider = NotifierProvider<BookNotifier, BookState>(BookNotifier.new);
 
 // 下载状态，用于管理下载进度和结果
 class DownloadState {
@@ -74,7 +75,8 @@ class DownloadState {
     double? progress,
     String? status,
     Uint8List? data,
-    bool clearData = false,   }) {
+    bool clearData = false,
+  }) {
     return DownloadState(
       isDownloading: isDownloading ?? this.isDownloading,
       progress: progress ?? this.progress,
@@ -85,9 +87,11 @@ class DownloadState {
 }
 
 // 下载状态管理器，负责启动下载并更新进度
-class DownloadNotifier extends StateNotifier<DownloadState> {
-  final BookDownloader _downloader;
-  DownloadNotifier(this._downloader) : super(DownloadState());
+class DownloadNotifier extends Notifier<DownloadState> {
+  @override
+  DownloadState build() {
+    return DownloadState();
+  }
 
   // 清除已下载的数据（Web平台）
   void clearDownloadData() {
@@ -104,29 +108,28 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   }) async {
     if (state.isDownloading) return;
 
-    state = DownloadState(isDownloading: true, status: '开始下载...');
+    state = state.copyWith(isDownloading: true, status: '开始下载...');
 
     try {
+      final downloader = BookDownloader(ref.read(apiClientProvider));
       if (kIsWeb) {
         // Web平台：使用downloadBookForWeb，返回字节数据
-        final fileData = await _downloader.downloadBookForWeb(
+        final fileData = await downloader.downloadBookForWeb(
           book: book,
           format: format,
           onStatusUpdate: (status) => state = state.copyWith(status: status),
-          onProgressUpdate: (progress) =>
-              state = state.copyWith(progress: progress),
+          onProgressUpdate: (progress) => state = state.copyWith(progress: progress),
         );
         state = state.copyWith(
             isDownloading: false, status: '下载成功！', data: fileData);
       } else {
         // 桌面/移动平台：使用downloadBook，保存到文件系统
-        await _downloader.downloadBook(
+        await downloader.downloadBook(
           book: book,
           format: format,
           savePath: savePath,
           onStatusUpdate: (status) => state = state.copyWith(status: status),
-          onProgressUpdate: (progress) =>
-              state = state.copyWith(progress: progress),
+          onProgressUpdate: (progress) => state = state.copyWith(progress: progress),
         );
         state = state.copyWith(isDownloading: false, status: '下载成功！');
       }
@@ -137,9 +140,6 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
   }
 }
 
-// 下载状态提供者
+// 下载状态提供者 (Riverpod 3.0 语法)
 final downloadProvider =
-    StateNotifierProvider<DownloadNotifier, DownloadState>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return DownloadNotifier(BookDownloader(apiClient));
-});
+    NotifierProvider<DownloadNotifier, DownloadState>(DownloadNotifier.new);

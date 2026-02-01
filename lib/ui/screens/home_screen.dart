@@ -48,7 +48,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     // 执行搜索：根据输入内容判断是书籍ID还是关键词
     void performSearch() {
       final rawInput = _searchController.text.trim();
@@ -69,8 +68,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(bookProvider.notifier).fetchBook(parsedId);
         ref.read(searchProvider.notifier).clearSearch();
       } else {
-        // 输入是关键词，执行搜索
-        ref.read(searchKeywordProvider.notifier).state = rawInput;
+        // 输入是关键词，执行搜索 - 使用Notifier方法而不是直接设置state
+        ref.read(searchKeywordProvider.notifier).update(rawInput);
         ref.read(searchProvider.notifier).searchBooks(rawInput);
       }
     }
@@ -190,7 +189,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               IconButton(
                                 icon: const Icon(Icons.arrow_back),
                                 onPressed: () {
-                                  ref.read(selectedBookIdProvider.notifier).state = null;
+                                  // 使用Notifier方法而不是直接设置state
+                                  ref.read(selectedBookIdProvider.notifier).clear();
                                 },
                               ),
                               const SizedBox(width: 8),
@@ -263,8 +263,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: _isDividerHovered
-                                                        ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-                                                        : Theme.of(context).dividerColor.withOpacity(0.5),
+                            ? Theme.of(context).colorScheme.primary.withAlpha(128)
+                            : Theme.of(context).dividerColor.withAlpha(128),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

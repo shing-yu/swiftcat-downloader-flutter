@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/book.dart';
 import '../core/api_client.dart';
 
+// ============== 搜索状态相关 ==============
+
 // 搜索状态，用于管理搜索结果和加载状态
 class SearchState {
   final List<SearchResultBook> searchResults;
@@ -29,10 +31,11 @@ class SearchState {
 }
 
 // 搜索状态管理器，负责执行搜索并更新状态
-class SearchNotifier extends StateNotifier<SearchState> {
-  final ApiClient _apiClient;
-
-  SearchNotifier(this._apiClient) : super(SearchState());
+class SearchNotifier extends Notifier<SearchState> {
+  @override
+  SearchState build() {
+    return SearchState();
+  }
 
   // 根据关键词搜索书籍
   Future<void> searchBooks(String keyword) async {
@@ -44,7 +47,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final results = await _apiClient.searchBooks(keyword);
+      final apiClient = ref.read(apiClientProvider);
+      final results = await apiClient.searchBooks(keyword);
       state = state.copyWith(
         searchResults: results,
         isLoading: false,
@@ -63,11 +67,61 @@ class SearchNotifier extends StateNotifier<SearchState> {
   }
 }
 
-// API客户端提供者（与book_provider中的相同，这里重复定义）
+// ============== 书籍选择相关 ==============
+
+// 选中的书籍ID Notifier
+class SelectedBookIdNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    // 初始状态为null
+    return null;
+  }
+
+  // 选择一本书籍
+  void select(String bookId) {
+    state = bookId;
+  }
+
+  // 清除选中的书籍
+  void clear() {
+    state = null;
+  }
+}
+
+// ============== 搜索关键词相关 ==============
+
+// 搜索关键词 Notifier
+class SearchKeywordNotifier extends Notifier<String> {
+  @override
+  String build() {
+    // 初始状态为空字符串
+    return '';
+  }
+
+  // 更新搜索关键词
+  void update(String keyword) {
+    state = keyword;
+  }
+
+  // 清除搜索关键词
+  void clear() {
+    state = '';
+  }
+}
+
+// ============== 提供者定义 ==============
+
 final apiClientProvider = Provider((ref) => ApiClient());
 
-// 搜索状态提供者
-final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return SearchNotifier(apiClient);
+// 搜索状态提供者 (Riverpod 3.0 语法)
+final searchProvider = NotifierProvider<SearchNotifier, SearchState>(SearchNotifier.new);
+
+// 选中的书籍ID提供者
+final selectedBookIdProvider = NotifierProvider<SelectedBookIdNotifier, String?>(() {
+  return SelectedBookIdNotifier();
+});
+
+// 搜索关键词提供者
+final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(() {
+  return SearchKeywordNotifier();
 });

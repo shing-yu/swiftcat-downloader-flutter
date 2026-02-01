@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform , Directory;
+import 'dart:io' show Platform, Directory;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
 import '../../core/book_downloader.dart';
 import '../../models/book.dart';
 import '../../providers/book_provider.dart';
@@ -43,9 +42,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         }
       }
     } catch (err) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('无法获取下载目录')),
-      );
+      // 不在这里显示错误，而是在调用处统一处理
     }
     return directory?.path;
   }
@@ -57,20 +54,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     try {
       if (kIsWeb) {
         if (_selectedFormat == DownloadFormat.chapterTxt) {
+          // 直接使用showDialog，不需要异步包装
           if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('不支持分章节下载'),
-              content: const Text('Web 平台不支持分章节下载，请选择单文件下载。'),
-              actions: [
-                TextButton(
-                  child: const Text('确定'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          );
+          _showWebNotSupportedDialog();
           return;
         } else {
           String extension = _selectedFormat == DownloadFormat.singleTxt ? 'txt' : 'epub';
@@ -79,7 +65,8 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       } else if (isAndroid || isIOS) {
         var hasPermission = true;
         if (isAndroid) {
-          final deviceInfo = await DeviceInfoPlugin().androidInfo;
+          final deviceInfoPlugin = DeviceInfoPlugin();
+          final deviceInfo = await deviceInfoPlugin.androidInfo;
           PermissionStatus status;
 
           if (deviceInfo.version.sdkInt >= 30) {
@@ -110,20 +97,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
             throw Exception("无法获取下载目录。");
           }
         } else {
+          // 直接显示权限不足对话框
           if (!mounted) return;
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('权限不足'),
-              content: const Text('需要存储权限才能下载文件'),
-              actions: [
-                TextButton(
-                  child: const Text('确定'),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          );
+          _showPermissionDeniedDialog();
           return;
         }
       } else {
@@ -140,8 +116,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         }
       }
     } catch (e) {
+      // 直接显示错误SnackBar
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('文件路径获取失败: $e')));
+      _showErrorSnackBar('文件路径获取失败: $e');
       return;
     }
 
@@ -155,11 +132,62 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         savePath: outputPath,
       );
     } else {
+      // 直接显示取消SnackBar
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('操作已取消')),
-      );
+      _showCancelSnackBar();
     }
+  }
+
+  // 辅助方法：显示Web不支持对话框
+  void _showWebNotSupportedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('不支持分章节下载'),
+        content: const Text('Web 平台不支持分章节下载，请选择单文件下载。'),
+        actions: [
+          TextButton(
+            child: const Text('确定'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 辅助方法：显示权限不足对话框
+  void _showPermissionDeniedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('权限不足'),
+        content: const Text('需要存储权限才能下载文件'),
+        actions: [
+          TextButton(
+            child: const Text('确定'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 辅助方法：显示错误SnackBar
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  // 辅助方法：显示取消SnackBar
+  void _showCancelSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('操作已取消')),
+    );
+  }
+
+  @override
+  void dispose() {
+    // 清理资源
+    super.dispose();
   }
 
   @override
@@ -173,27 +201,31 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           if (kIsWeb) {
             if (next.data != null) {
               FileSaver.instance.saveFile(
-                  name: p.basenameWithoutExtension(fileName),
-                  bytes: next.data!,
-                  fileExtension: p.extension(fileName).replaceFirst('.', ''),
-                  mimeType: MimeType.text
+                name: p.basenameWithoutExtension(fileName),
+                bytes: next.data!,
+                fileExtension: p.extension(fileName).replaceFirst('.', ''),
+                mimeType: MimeType.text
               );
               ref.read(downloadProvider.notifier).clearDownloadData();
             }
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
+            // 使用WidgetsBinding来确保在正确的时机显示SnackBar
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('下载完成: $path'),
                   duration: const Duration(seconds: 6),
                   behavior: SnackBarBehavior.floating,
                   action: _selectedFormat != DownloadFormat.chapterTxt
                       ? SnackBarAction(
-                    label: '打开',
-                    onPressed: () => OpenFile.open(path),
-                  )
+                          label: '打开',
+                          onPressed: () => OpenFile.open(path),
+                        )
                       : null,
                 )
-            );
+              );
+            });
           }
           _lastDownloadedPath = null;
         }
@@ -202,20 +234,23 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
     ref.listen<BookState>(bookProvider, (previous, next) {
       if (next.error != null && previous?.error == null) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('获取信息失败'),
-            content: Text('请检查小说ID是否正确\n${next.error}'),
-            actions: [
-              TextButton(
-                child: const Text('确定'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        );
+        // 使用WidgetsBinding来确保在正确的时机显示对话框
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('获取信息失败'),
+              content: Text('请检查小说ID是否正确\n${next.error}'),
+              actions: [
+                TextButton(
+                  child: const Text('确定'),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        });
       }
     });
 
@@ -256,13 +291,18 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                       curve: Curves.easeOutCubic,
                       width: 120,
                       height: 160,
-                      transform: Matrix4.identity().scaled(_isImageHovered ? 1.05 : 1.0),
+                      transform: Matrix4.identity().scaledByDouble(
+                        _isImageHovered ? 1.05 : 1.0,
+                        _isImageHovered ? 1.05 : 1.0,
+                        _isImageHovered ? 1.05 : 1.0,
+                        1.0
+                      ),
                       transformAlignment: Alignment.center,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: _isImageHovered ? [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
+                            color: Colors.black.withAlpha(50),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           )
@@ -318,14 +358,14 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.outline.withAlpha(128),
                   width: 1.0,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.0),
                 borderSide: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.outline.withAlpha(128),
                   width: 1.0,
                 ),
               ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/book_provider.dart';
-import '../../providers/search_provider.dart';
+import '../../providers/book_provider.dart'; // 已经是Notifier
+import '../../providers/search_provider.dart'; // 已经是Notifier
 
-// 搜索结果视图，显示搜索到的书籍列表
+// 搜索结果显示视图
 class SearchResultView extends ConsumerWidget {
   final VoidCallback? onResultSelected;
   const SearchResultView({super.key, this.onResultSelected});
@@ -11,7 +11,10 @@ class SearchResultView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchState = ref.watch(searchProvider);
+    
+    // 从NotifierProvider获取状态
     final selectedBookId = ref.watch(selectedBookIdProvider);
+    final searchKeyword = ref.watch(searchKeywordProvider);
 
     if (searchState.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -22,9 +25,8 @@ class SearchResultView extends ConsumerWidget {
     }
 
     if (searchState.searchResults.isEmpty) {
-      final searchKeyword = ref.watch(searchKeywordProvider);
       if (searchKeyword.isNotEmpty) {
-        return Center(child: Text('没有找到与“$searchKeyword”相关的结果。'));
+        return Center(child: Text('没有找到与"$searchKeyword"相关的结果。'));
       }
       return const Center(child: Text('没有搜索结果。'));
     }
@@ -62,22 +64,18 @@ class SearchResultView extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  leading: IgnorePointer(
-                    ignoring: false,
-                    child: Radio<String>(
-                      value: book.id,
-                      groupValue: selectedBookId,
-                      onChanged: (String? value) {
-                        if (value != null) {
-                          ref.read(selectedBookIdProvider.notifier).state = value;
-                          ref.read(bookProvider.notifier).fetchBook(value);
-                          onResultSelected?.call();
-                        }
-                      },
-                    ),
+                  // 简化：使用选中状态而不是 Radio
+                  tileColor: selectedBookId == book.id
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                      : null,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   onTap: () {
-                    ref.read(selectedBookIdProvider.notifier).state = book.id;
+                    // 使用Notifier的方法设置选中的书籍ID
+                    ref.read(selectedBookIdProvider.notifier).select(book.id);
+                    
+                    // 调用bookProvider的Notifier方法获取书籍信息
                     ref.read(bookProvider.notifier).fetchBook(book.id);
                     onResultSelected?.call();
                   },
@@ -90,8 +88,3 @@ class SearchResultView extends ConsumerWidget {
     );
   }
 }
-
-// 选中的书籍ID提供者
-final selectedBookIdProvider = StateProvider<String?>((ref) => null);
-// 搜索关键词提供者
-final searchKeywordProvider = StateProvider<String>((ref) => '');

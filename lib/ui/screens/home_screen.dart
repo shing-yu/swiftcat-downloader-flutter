@@ -45,6 +45,10 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isDividerHovered = false; // 用于桌面分隔条悬停效果
+  bool _isDragging = false; // 跟踪是否正在拖动
+  double _leftPanelWidth = 300; // 左侧面板的初始宽度
+  double _dragStartX = 0; // 拖动开始的X坐标
+  double _dragStartWidth = 300; // 拖动开始时的左侧面板宽度
 
   @override
   Widget build(BuildContext context) {
@@ -240,8 +244,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               desktopBody: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 2,
+                  // 左侧面板（搜索结果）
+                  SizedBox(
+                    width: _leftPanelWidth,
                     child: Column(
                       children: [
                         searchBar,
@@ -251,26 +256,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
-                  // 可交互的分隔条（悬停效果）
+                  // 可拖动的分隔条
                   MouseRegion(
+                    cursor: SystemMouseCursors.resizeColumn, // 显示列调整光标
                     onEnter: (_) => setState(() => _isDividerHovered = true),
                     onExit: (_) => setState(() => _isDividerHovered = false),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      width: _isDividerHovered ? 3 : 1,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: _isDividerHovered ? 4 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isDividerHovered
-                            ? Theme.of(context).colorScheme.primary.withAlpha(128)
-                            : Theme.of(context).dividerColor.withAlpha(128),
-                        borderRadius: BorderRadius.circular(2),
+                    child: GestureDetector(
+                      onHorizontalDragStart: (details) {
+                        setState(() {
+                          _isDragging = true;
+                          _dragStartX = details.globalPosition.dx;
+                          _dragStartWidth = _leftPanelWidth;
+                        });
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        setState(() {
+                          final delta = details.globalPosition.dx - _dragStartX;
+                          final newWidth = _dragStartWidth + delta;
+                          
+                          // 限制最小和最大宽度
+                          final minWidth = 200.0;
+                          final maxWidth = MediaQuery.of(context).size.width * 0.8;
+                          
+                          _leftPanelWidth = newWidth.clamp(minWidth, maxWidth);
+                        });
+                      },
+                      onHorizontalDragEnd: (_) {
+                        setState(() {
+                          _isDragging = false;
+                        });
+                      },
+                      onHorizontalDragCancel: () {
+                        setState(() {
+                          _isDragging = false;
+                        });
+                      },
+                      child: Container(
+                        width: _isDragging ? 8 : (_isDividerHovered ? 6 : 4),
+                        margin: EdgeInsets.symmetric(
+                          horizontal: _isDragging ? 0 : (_isDividerHovered ? 2 : 3),
+                        ),
+                        decoration: BoxDecoration(
+                          color: _isDragging
+                              ? Theme.of(context).colorScheme.primary
+                              : _isDividerHovered
+                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 128)
+                                  : Theme.of(context).dividerColor.withValues(alpha: 128),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     ),
                   ),
+                  // 右侧面板（书籍详情）
                   Expanded(
-                    flex: 3,
                     child: SingleChildScrollView(
                       child: const BookDetailView(),
                     ),

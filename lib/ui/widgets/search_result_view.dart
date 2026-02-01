@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/book_provider.dart'; // 已经是Notifier
-import '../../providers/search_provider.dart'; // 已经是Notifier
+import '../../providers/book_provider.dart';
+import '../../providers/search_provider.dart';
 
 // 搜索结果显示视图
 class SearchResultView extends ConsumerWidget {
@@ -79,10 +79,10 @@ class SearchResultView extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  // 使用正确的选中状态背景色（10% 不透明度）
+                  // 使用正确的选中状态背景色（10% 不透明度，0.1 对应 25 的alpha值）
                   selected: selectedBookId == book.id,
                   selectedTileColor: selectedBookId == book.id
-                      ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                      ? Theme.of(context).colorScheme.primary.withAlpha(25)
                       : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),

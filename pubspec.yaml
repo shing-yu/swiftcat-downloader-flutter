@@ -35,6 +35,7 @@ dependencies:
 
   # UI & 基础
   cupertino_icons: ^1.0.2
+  dynamic_color: ^1.8.1
 
   # 状态管理
   flutter_riverpod: ^3.2.0     # 用于状态管理
@@ -121,3 +122,4 @@ flutter_launcher_icons:
   macos:
     generate: true
     background_color: "#FFFFFF"
+

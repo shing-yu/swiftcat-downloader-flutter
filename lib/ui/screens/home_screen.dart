@@ -300,8 +300,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           color: _isDragging
                               ? Theme.of(context).colorScheme.primary
                               : _isDividerHovered
-                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 128)
-                                  : Theme.of(context).dividerColor.withValues(alpha: 128),
+                                  ? Theme.of(context).colorScheme.primary.withAlpha(128)
+                                  : Theme.of(context).dividerColor.withAlpha(128),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),

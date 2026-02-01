@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform, Directory;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -344,47 +344,35 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
   Widget _buildDownloadControls(Book book) {
     final downloadState = ref.watch(downloadProvider);
-
-    final labelAndDropdown = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('下载格式: ', style: TextStyle(fontSize: 16)),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 150,
-          child: DropdownButtonFormField<DownloadFormat>(
-            initialValue: _selectedFormat,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withAlpha(128),
-                  width: 1.0,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withAlpha(128),
-                  width: 1.0,
-                ),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
-            ),
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            items: [
-              const DropdownMenuItem(value: DownloadFormat.singleTxt, child: Text('TXT (单文件)')),
-              if (!kIsWeb)
-                const DropdownMenuItem(value: DownloadFormat.chapterTxt, child: Text('TXT (分章节)')),
-            ],
-            onChanged: downloadState.isDownloading
-                ? null
-                : (value) {
-              if (value != null) setState(() => _selectedFormat = value);
-            },
-          ),
+    
+    // 修正：使用正确的类型 List<ButtonSegment<DownloadFormat>>
+    final List<ButtonSegment<DownloadFormat>> segments = [
+      const ButtonSegment<DownloadFormat>(
+        value: DownloadFormat.singleTxt,
+        label: Text('单文件'),
+        icon: Icon(Icons.insert_drive_file),
+      ),
+      if (!kIsWeb) // Web平台不显示分章节选项
+        const ButtonSegment<DownloadFormat>(
+          value: DownloadFormat.chapterTxt,
+          label: Text('分章节'),
+          icon: Icon(Icons.folder),
         ),
-      ],
+    ];
+
+    final segmentSelector = SegmentedButton<DownloadFormat>(
+      segments: segments,
+      selected: {_selectedFormat},
+      onSelectionChanged: downloadState.isDownloading
+          ? null
+          : (Set<DownloadFormat> newSelection) {
+              if (newSelection.isNotEmpty) {
+                setState(() {
+                  _selectedFormat = newSelection.first;
+                });
+              }
+            },
+      showSelectedIcon: false,
     );
 
     final downloadButton = ElevatedButton.icon(
@@ -400,12 +388,15 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        const double breakpoint = 420.0;
+        const double breakpoint = 500.0;
         if (constraints.maxWidth < breakpoint) {
+          // 小屏幕布局：垂直排列
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              labelAndDropdown,
+              const Text('下载格式:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 8),
+              segmentSelector,
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,
@@ -414,9 +405,19 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
             ],
           );
         } else {
+          // 大屏幕布局：水平排列
           return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              labelAndDropdown,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('下载格式:', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 8),
+                  segmentSelector,
+                ],
+              ),
               const Spacer(),
               downloadButton,
             ],

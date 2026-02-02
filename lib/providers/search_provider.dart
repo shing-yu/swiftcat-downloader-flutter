@@ -49,15 +49,9 @@ class SearchNotifier extends Notifier<SearchState> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final results = await apiClient.searchBooks(keyword);
-      state = state.copyWith(
-        searchResults: results,
-        isLoading: false,
-      );
+      state = state.copyWith(searchResults: results, isLoading: false);
     } catch (e) {
-      state = state.copyWith(
-        error: e.toString(),
-        isLoading: false,
-      );
+      state = state.copyWith(error: e.toString(), isLoading: false);
     }
   }
 
@@ -86,6 +80,9 @@ class SelectedBookIdNotifier extends Notifier<String?> {
   void clear() {
     state = null;
   }
+
+  // 判断是否有选中的书籍
+  bool get hasSelected => state != null && state!.isNotEmpty;
 }
 
 // ============== 搜索关键词相关 ==============
@@ -114,14 +111,19 @@ class SearchKeywordNotifier extends Notifier<String> {
 final apiClientProvider = Provider((ref) => ApiClient());
 
 // 搜索状态提供者 (Riverpod 3.0 语法)
-final searchProvider = NotifierProvider<SearchNotifier, SearchState>(SearchNotifier.new);
+final searchProvider = NotifierProvider<SearchNotifier, SearchState>(
+  SearchNotifier.new,
+);
 
 // 选中的书籍ID提供者
-final selectedBookIdProvider = NotifierProvider<SelectedBookIdNotifier, String?>(() {
-  return SelectedBookIdNotifier();
-});
+final selectedBookIdProvider =
+    NotifierProvider<SelectedBookIdNotifier, String?>(() {
+      return SelectedBookIdNotifier();
+    });
 
 // 搜索关键词提供者
-final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(() {
-  return SearchKeywordNotifier();
-});
+final searchKeywordProvider = NotifierProvider<SearchKeywordNotifier, String>(
+  () {
+    return SearchKeywordNotifier();
+  },
+);

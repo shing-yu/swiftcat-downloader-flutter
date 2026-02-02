@@ -1,7 +1,9 @@
+import 'package:flutter/cupertino.dart'; // 添加这行导入
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_provider.dart';
 import '../../providers/search_provider.dart';
+import '../screens/book_detail_screen.dart';
 
 // 搜索结果显示视图
 class SearchResultView extends ConsumerWidget {
@@ -11,10 +13,11 @@ class SearchResultView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchState = ref.watch(searchProvider);
-    
+
     // 从NotifierProvider获取状态
     final selectedBookId = ref.watch(selectedBookIdProvider);
     final searchKeyword = ref.watch(searchKeywordProvider);
+    final bool isMobile = MediaQuery.of(context).size.width < 600;
 
     if (searchState.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -36,8 +39,10 @@ class SearchResultView extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text('共找到 ${searchState.searchResults.length} 条结果。',
-              style: Theme.of(context).textTheme.titleMedium),
+          child: Text(
+            '共找到 ${searchState.searchResults.length} 条结果。',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
         Expanded(
           child: ListView.builder(
@@ -45,13 +50,12 @@ class SearchResultView extends ConsumerWidget {
             itemBuilder: (context, index) {
               final book = searchState.searchResults[index];
               final status = book.isOver ? '完结' : '连载中';
-              
-              // 使用Card来包裹每个列表项，避免状态混淆
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 elevation: 1,
                 child: ListTile(
-                  key: ValueKey(book.id), // 确保每个项目有唯一key
+                  key: ValueKey(book.id),
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -59,7 +63,7 @@ class SearchResultView extends ConsumerWidget {
                         '《${book.title}》',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: selectedBookId == book.id 
+                          color: selectedBookId == book.id
                               ? Theme.of(context).colorScheme.primary
                               : null,
                         ),
@@ -72,14 +76,11 @@ class SearchResultView extends ConsumerWidget {
                       Text(
                         status,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: status == '完结' 
-                              ? Colors.green 
-                              : Colors.orange,
+                          color: status == '完结' ? Colors.green : Colors.orange,
                         ),
                       ),
                     ],
                   ),
-                  // 使用正确的选中状态背景色（10% 不透明度，0.1 对应 25 的alpha值）
                   selected: selectedBookId == book.id,
                   selectedTileColor: selectedBookId == book.id
                       ? Theme.of(context).colorScheme.primary.withAlpha(25)
@@ -90,9 +91,20 @@ class SearchResultView extends ConsumerWidget {
                   onTap: () {
                     // 使用Notifier的方法设置选中的书籍ID
                     ref.read(selectedBookIdProvider.notifier).select(book.id);
-                    
+
                     // 调用bookProvider的Notifier方法获取书籍信息
                     ref.read(bookProvider.notifier).fetchBook(book.id);
+
+                    // 如果是移动端，跳转到详情页面
+                    if (isMobile) {
+                      Navigator.of(context).push(
+                        CupertinoPageRoute(
+                          builder: (context) => const BookDetailScreen(),
+                          settings: const RouteSettings(name: '/book-detail'),
+                        ),
+                      );
+                    }
+
                     onResultSelected?.call();
                   },
                 ),

@@ -4,6 +4,7 @@ import 'package:swiftcat_downloader/globals.dart';
 import 'package:swiftcat_downloader/providers/theme_provider.dart';
 import 'package:swiftcat_downloader/ui/screens/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:swiftcat_downloader/ui/screens/book_detail_screen.dart';
 
 // 应用入口点
 void main() async {
@@ -49,7 +50,12 @@ class MyApp extends StatelessWidget {
                 theme: _buildTheme(lightDynamic, Brightness.light),
                 darkTheme: _buildTheme(darkDynamic, Brightness.dark),
                 themeMode: themeMode,
-                home: const HomeScreen(),
+                // 定义路由
+                initialRoute: '/',
+                routes: {
+                  '/': (context) => const HomeScreen(),
+                  '/book-detail': (context) => const BookDetailScreen(),
+                },
               );
             },
           );

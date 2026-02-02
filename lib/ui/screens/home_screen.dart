@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart'; // 添加这行导入
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -92,30 +92,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final Brightness currentBrightness = Theme.of(context).brightness;
+
     // 执行搜索：根据输入内容判断是书籍ID还是关键词
     void performSearch() {
       _performSearch(context);
     }
 
-    // 搜索栏组件
+    // 搜索栏组件 - 使用动态颜色
     final searchBar = Padding(
       padding: const EdgeInsets.all(16.0),
       child: TextField(
         controller: _searchController,
+        style: TextStyle(color: colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: '搜索',
+          labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
           hintText: '输入小说ID、链接或关键词',
+          hintStyle: TextStyle(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          ),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(24.0)),
           suffixIcon: IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(Icons.search, color: colorScheme.primary),
             onPressed: performSearch,
           ),
         ),
         onSubmitted: (_) => performSearch(),
       ),
     );
-
-    final Brightness currentBrightness = Theme.of(context).brightness;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,6 +134,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               currentBrightness == Brightness.dark
                   ? Icons.light_mode_outlined
                   : Icons.dark_mode_outlined,
+              color: colorScheme.onSurface,
             ),
             tooltip: '切换模式',
             onPressed: () {
@@ -136,7 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
           // 关于对话框按钮
           IconButton(
-            icon: const Icon(Icons.info_outline),
+            icon: Icon(Icons.info_outline, color: colorScheme.onSurface),
             tooltip: '关于',
             onPressed: () {
               showAboutDialog(
@@ -156,13 +163,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: RichText(
                       textAlign: TextAlign.center,
                       text: TextSpan(
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface,
+                        ),
                         children: <TextSpan>[
                           const TextSpan(text: 'flutter版本是技术测试版本\n'),
                           const TextSpan(text: '此应用为学习和技术演示目的而创建\n基于 '),
                           TextSpan(
                             text: 'SSLA 1.0',
-                            style: const TextStyle(color: Colors.blue),
+                            style: TextStyle(color: colorScheme.primary),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 launchUrl(
@@ -174,7 +183,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const TextSpan(text: '本软件免费提供，谨防上当受骗\n'),
                           TextSpan(
                             text: '源代码仓库',
-                            style: const TextStyle(color: Colors.blue),
+                            style: TextStyle(color: colorScheme.primary),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 launchUrl(
@@ -209,38 +218,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         final searchKeyword = ref.watch(searchKeywordProvider);
 
                         if (searchState.isLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
+                          return Center(
+                            child: CircularProgressIndicator(
+                              color: colorScheme.primary,
+                            ),
                           );
                         }
 
                         if (searchState.error != null) {
                           return Center(
-                            child: Text('搜索出错: ${searchState.error}'),
+                            child: Text(
+                              '搜索出错: ${searchState.error}',
+                              style: TextStyle(color: colorScheme.error),
+                            ),
                           );
                         }
 
                         if (searchState.searchResults.isEmpty) {
                           if (searchKeyword.isNotEmpty) {
                             return Center(
-                              child: Text('没有找到与"$searchKeyword"相关的结果。'),
+                              child: Text(
+                                '没有找到与"$searchKeyword"相关的结果。',
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             );
                           }
-                          return const Center(
+                          return Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
                                   Icons.search,
                                   size: 64,
-                                  color: Colors.grey,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
-                                SizedBox(height: 16),
+                                const SizedBox(height: 16),
                                 Text(
                                   '搜索您想下载的小说',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: Colors.grey,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               ],
@@ -273,7 +292,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   // 固定分隔条
-                  Container(width: 1, color: Theme.of(context).dividerColor),
+                  Container(
+                    width: 1,
+                    color: colorScheme.outline.withValues(alpha: 0.2),
+                  ),
                   // 右侧面板（书籍详情）
                   Expanded(
                     child: SingleChildScrollView(child: const BookDetailView()),

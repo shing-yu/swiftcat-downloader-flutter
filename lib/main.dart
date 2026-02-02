@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:swiftcat_downloader/globals.dart';
-import 'package:swiftcat_downloader/providers/theme_provider.dart';
+import 'package:swiftcat_downloader/providers.dart';
 import 'package:swiftcat_downloader/ui/screens/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -3,17 +3,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/gestures.dart';
-import '../../providers/book_provider.dart';
-import '../../providers/theme_provider.dart';
-import '../../providers/search_provider.dart';
+import '../../providers.dart';
 import '../widgets/book_detail_view.dart';
-import '../widgets/responsive_layout.dart';
-import '../widgets/status_bar.dart';
 import '../widgets/search_result_view.dart';
 import '../../globals.dart';
 import 'book_detail_screen.dart';
 
-// 解析用户输入，提取书籍ID（支持纯数字、七猫URL、分享URL）
+// ============== 响应式布局组件 ==============
+class ResponsiveLayout extends StatelessWidget {
+  final Widget mobileBody;
+  final Widget desktopBody;
+
+  const ResponsiveLayout({
+    required this.mobileBody,
+    required this.desktopBody,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          return mobileBody;
+        } else {
+          return desktopBody;
+        }
+      },
+    );
+  }
+}
+
+// ============== 主屏幕 ==============
 String? _parseBookIdInput(String input) {
   final pureDigitsRegex = RegExp(r'^\d+$');
   final qimaoUrlRegex = RegExp(r'www\.qimao\.com/shuku/(\d+)');
@@ -36,7 +57,6 @@ String? _parseBookIdInput(String input) {
   return null;
 }
 
-// 主屏幕，包含搜索栏、书籍详情、搜索结果等
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -62,16 +82,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bool isMobile = MediaQuery.of(context).size.width < 600;
 
     if (parsedId != null) {
-      // 输入是书籍ID或URL，获取书籍详情
       if (parsedId != rawInput) {
         _searchController.text = parsedId;
       }
       ref.read(bookProvider.notifier).fetchBook(parsedId);
       ref.read(searchProvider.notifier).clearSearch();
 
-      // 如果是移动端，跳转到详情页面
       if (isMobile && mounted) {
-        // 使用 CupertinoPageRoute 获得更好的滑动返回体验
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             Navigator.of(context).push(
@@ -84,7 +101,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         });
       }
     } else {
-      // 输入是关键词，执行搜索 - 使用Notifier方法而不是直接设置state
       ref.read(searchKeywordProvider.notifier).update(rawInput);
       ref.read(searchProvider.notifier).searchBooks(rawInput);
     }
@@ -95,12 +111,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final Brightness currentBrightness = Theme.of(context).brightness;
 
-    // 执行搜索：根据输入内容判断是书籍ID还是关键词
     void performSearch() {
       _performSearch(context);
     }
 
-    // 搜索栏组件 - 使用动态颜色
     final searchBar = Padding(
       padding: const EdgeInsets.all(16.0),
       child: TextField(
@@ -128,7 +142,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         title: const Text('灵猫小说下载器'),
         elevation: 2,
         actions: [
-          // 主题切换按钮
           IconButton(
             icon: Icon(
               currentBrightness == Brightness.dark
@@ -141,7 +154,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ref.read(themeProvider.notifier).toggleTheme(currentBrightness);
             },
           ),
-          // 关于对话框按钮
           IconButton(
             icon: Icon(Icons.info_outline, color: colorScheme.onSurface),
             tooltip: '关于',
@@ -207,7 +219,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           Expanded(
             child: ResponsiveLayout(
-              // 移动端布局：仅显示搜索栏和搜索结果
               mobileBody: Column(
                 children: [
                   searchBar,
@@ -267,23 +278,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           );
                         }
 
-                        return SearchResultView(
-                          onResultSelected: () {
-                            // 移动端会通过导航跳转，这里不需要额外操作
-                          },
-                        );
+                        return SearchResultView(onResultSelected: () {});
                       },
                     ),
                   ),
                 ],
               ),
-              // 桌面端布局：左侧搜索结果 + 分隔条 + 右侧书籍详情
               desktopBody: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 左侧面板（搜索结果）- 固定宽度
                   SizedBox(
-                    width: 300, // 固定宽度
+                    width: 300,
                     child: Column(
                       children: [
                         searchBar,
@@ -291,12 +296,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
-                  // 固定分隔条
                   Container(
                     width: 1,
                     color: colorScheme.outline.withValues(alpha: 0.2),
                   ),
-                  // 右侧面板（书籍详情）
                   Expanded(
                     child: SingleChildScrollView(child: const BookDetailView()),
                   ),
@@ -304,7 +307,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-          const StatusBar(), // 底部状态栏
+          const StatusBar(),
         ],
       ),
     );

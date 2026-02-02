@@ -1,8 +1,7 @@
 import 'package:flutter/cupertino.dart'; // 添加这行导入
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/book_provider.dart';
-import '../../providers/search_provider.dart';
+import '../../providers.dart';
 import '../screens/book_detail_screen.dart';
 
 // 搜索结果显示视图

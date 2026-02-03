@@ -415,6 +415,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
   Widget _buildDownloadControls(Book book) {
     final downloadState = ref.watch(downloadProvider);
 
+    // 创建格式选项列表
     final List<ButtonSegment<DownloadFormat>> segments = [
       const ButtonSegment<DownloadFormat>(
         value: DownloadFormat.singleTxt,
@@ -427,6 +428,11 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           label: Text('分章节'),
           icon: Icon(Icons.folder),
         ),
+      const ButtonSegment<DownloadFormat>(
+        value: DownloadFormat.epub,
+        label: Text('EPUB'),
+        icon: Icon(Icons.menu_book),
+      ),
     ];
 
     final segmentSelector = SegmentedButton<DownloadFormat>(

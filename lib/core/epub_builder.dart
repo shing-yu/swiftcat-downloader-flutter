@@ -1,4 +1,3 @@
-// lib/core/book_downloader.dart
 import 'dart:convert';
 import 'dart:io';
 
@@ -6,13 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
+import 'package:swiftcat_downloader/core/book_downloader.dart';
 import 'package:xml/xml.dart' as xml;
 
 import 'api_client.dart';
 import '../models/book.dart';
-
-// 下载格式：单文件TXT、分章节TXT或EPUB
-enum DownloadFormat { singleTxt, chapterTxt, epub }
 
 // EPUB章节类
 class EpubChapter {

@@ -1,19 +1,15 @@
-// lib/core/book_downloader.dart
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
+import 'package:swiftcat_downloader/core/book_downloader.dart';
 import 'package:xml/xml.dart' as xml;
 
 import 'api_client.dart';
 import '../models/book.dart';
-
-// 下载格式：单文件TXT、分章节TXT或EPUB
-enum DownloadFormat { singleTxt, chapterTxt, epub }
 
 // EPUB章节类
 class EpubChapter {
@@ -546,13 +542,14 @@ hr {
   }
 }
 
+// 书籍下载器，负责下载、解密、打包小说内容
 class BookDownloader {
-  final ApiClient _apiClient;
-  final Dio _dio = Dio();
+  final ApiClient _apiClient; // API客户端实例
+  final Dio _dio = Dio(); // HTTP客户端
 
   BookDownloader(this._apiClient);
 
-  // --- 新增: Web平台专用的下载方法 ---
+  // Web平台下载书籍，返回Uint8List（浏览器中无法直接写文件）
   Future<Uint8List> downloadBookForWeb({
     required Book book,
     required DownloadFormat format,
@@ -564,14 +561,14 @@ class BookDownloader {
       onProgressUpdate(0.0);
       final zipLink = await _apiClient.getCacheZipLink(book.bookId);
 
-      // 1. 下载ZIP文件到内存
+      // 下载ZIP文件
       onStatusUpdate('正在下载缓存文件...');
       final response = await _dio.get<List<int>>(
         zipLink,
         options: Options(responseType: ResponseType.bytes),
         onReceiveProgress: (received, total) {
           if (total != -1) {
-            onProgressUpdate((received / total) * 0.4); // 下载占40%进度
+            onProgressUpdate((received / total) * 0.4);
           }
           onStatusUpdate(
             '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
@@ -580,29 +577,28 @@ class BookDownloader {
       );
       final zipBytes = Uint8List.fromList(response.data!);
 
-      // 2. 在内存中解压文件
+      // 解压ZIP
       onStatusUpdate('正在解压文件...');
       final archive = ZipDecoder().decodeBytes(zipBytes);
-      onProgressUpdate(0.5); // 解压完成，进度50%
+      onProgressUpdate(0.5);
 
-      // 3. 解密章节
+      // 解密每个章节
       onStatusUpdate('正在解密章节...');
       final Map<String, String> decryptedChapters = {};
       int i = 0;
       for (var file in archive) {
         if (file.isFile) {
           final chapterId = p.basenameWithoutExtension(file.name);
-          // 假设文件内容是UTF-8编码的
           final encryptedContent = utf8.decode(file.content as List<int>);
           decryptedChapters[chapterId] = _apiClient.decryptChapterContent(
             encryptedContent,
           );
         }
         i++;
-        onProgressUpdate(0.5 + (i / archive.length) * 0.2); // 解密占20%进度
+        onProgressUpdate(0.5 + (i / archive.length) * 0.2);
       }
 
-      // 4. 根据格式生成文件内容 (返回 Uint8List)
+      // 生成最终文件
       onStatusUpdate('正在生成文件...');
       Uint8List fileData;
       switch (format) {
@@ -614,7 +610,6 @@ class BookDownloader {
           fileData = await _generateEpubForWeb(book, decryptedChapters);
           break;
         case DownloadFormat.chapterTxt:
-          // 此处已在函数开头处理，理论上不会执行到
           throw UnsupportedError('Web平台不支持分章节下载。');
       }
       onProgressUpdate(1.0);
@@ -622,12 +617,12 @@ class BookDownloader {
       return fileData;
     } catch (e) {
       onStatusUpdate('下载失败: $e');
-      print('Web download failed: $e');
+      debugPrint('Web download failed: $e');
       rethrow;
     }
   }
 
-  // 主下载函数，负责调度 (原生平台)
+  // 桌面/移动平台下载书籍，保存到本地文件系统
   Future<void> downloadBook({
     required Book book,
     required DownloadFormat format,
@@ -635,13 +630,13 @@ class BookDownloader {
     required Function(String) onStatusUpdate,
     required Function(double) onProgressUpdate,
   }) async {
-    // --- 新增: 如果在Web环境调用了此方法，则抛出异常 ---
+    // 检查是否在Web环境
     if (kIsWeb) {
       throw UnsupportedError(
         'downloadBook 方法不能在Web上调用，请使用 downloadBookForWeb。',
       );
     }
-    // 创建一个唯一的临时目录，避免冲突
+    // 创建临时目录
     final tempDir = await Directory.systemTemp.createTemp(
       'book_downloader_${book.bookId}_',
     );
@@ -651,14 +646,14 @@ class BookDownloader {
       onProgressUpdate(0.0);
       final zipLink = await _apiClient.getCacheZipLink(book.bookId);
 
-      // 1. 下载ZIP文件
+      // 下载ZIP文件到临时目录
       final zipFilePath = p.join(tempDir.path, '${book.bookId}.zip');
       await _dio.download(
         zipLink,
         zipFilePath,
         onReceiveProgress: (received, total) {
           if (total != -1) {
-            onProgressUpdate((received / total) * 0.4); // 下载占40%进度
+            onProgressUpdate((received / total) * 0.4);
           }
           onStatusUpdate(
             '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
@@ -666,16 +661,13 @@ class BookDownloader {
         },
       );
 
-      // 2. 解压文件
+      // 解压ZIP文件
       onStatusUpdate('正在解压文件...');
       final extractDir = Directory(p.join(tempDir.path, 'extracted'));
       await extractDir.create();
 
-      // --- 这里是关键的修改点 ---
-      // 不再使用 InputFileStream，避免文件句柄泄露
       final zipBytes = await File(zipFilePath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(zipBytes);
-      // --- 修改结束 ---
 
       for (var file in archive) {
         final filename = p.join(extractDir.path, file.name);
@@ -685,9 +677,9 @@ class BookDownloader {
           await outFile.writeAsBytes(file.content as List<int>);
         }
       }
-      onProgressUpdate(0.5); // 解压完成，进度50%
+      onProgressUpdate(0.5);
 
-      // 3. 解密章节
+      // 解密每个章节文件
       onStatusUpdate('正在解密章节...');
       final chapterFiles = await extractDir.list().toList();
       final Map<String, String> decryptedChapters = {};
@@ -700,10 +692,10 @@ class BookDownloader {
             encryptedContent,
           );
         }
-        onProgressUpdate(0.5 + (i / chapterFiles.length) * 0.2); // 解密占20%进度
+        onProgressUpdate(0.5 + (i / chapterFiles.length) * 0.2);
       }
 
-      // 4. 根据格式生成文件
+      // 根据格式生成最终文件
       onStatusUpdate('正在生成文件...');
       switch (format) {
         case DownloadFormat.singleTxt:
@@ -720,24 +712,22 @@ class BookDownloader {
       onStatusUpdate('下载完成！');
     } catch (e) {
       onStatusUpdate('下载失败: $e');
-      // 如果需要，可以在这里添加更详细的日志记录
-      print('Download failed: $e');
+      debugPrint('Download failed: $e');
       rethrow;
     } finally {
-      // 确保临时文件夹最后一定会被清理
+      // 清理临时目录
       if (await tempDir.exists()) {
         await tempDir.delete(recursive: true);
       }
     }
   }
 
-  // --- 私有辅助方法 (这部分无需修改) ---
-
+  // 清理文件名中的非法字符
   String _sanitizeFilename(String name) {
     return name.replaceAll(RegExp(r'[/:*?"<>|]'), '_');
   }
 
-  // --- 新增: 为Web生成TXT文件内容的方法 ---
+  // 为Web平台生成单文件TXT（返回字节数组）
   Future<Uint8List> _generateSingleTxtForWeb(
     Book book,
     Map<String, String> chapters,
@@ -753,10 +743,10 @@ class BookDownloader {
         buffer.writeln(chapters[chapterMeta.id]);
       }
     }
-    // 将字符串转换为UTF-8编码的Uint8List
     return utf8.encode(buffer.toString());
   }
 
+  // 生成单文件TXT并保存到本地路径
   Future<void> _generateSingleTxt(
     Book book,
     Map<String, String> chapters,
@@ -776,6 +766,7 @@ class BookDownloader {
     await File(path).writeAsString(buffer.toString());
   }
 
+  // 生成分章节TXT文件，每章一个文件
   Future<void> _generateChapterTxts(
     Book book,
     Map<String, String> chapters,
@@ -817,7 +808,7 @@ class BookDownloader {
           epubBuilder.setCoverImage(imageData);
         }
       } catch (e) {
-        print('下载封面失败: $e');
+        debugPrint('下载封面失败: $e');
       }
     }
 
@@ -854,7 +845,7 @@ class BookDownloader {
       );
       return response.data;
     } catch (e) {
-      print('Failed to download cover image: $e');
+      debugPrint('Failed to download cover image: $e');
       return null;
     }
   }

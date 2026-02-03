@@ -318,7 +318,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         const Text('下载格式: ', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 8),
         SizedBox(
-          width: 150,
+          width: 160,
           child: DropdownButtonFormField<DownloadFormat>(
             initialValue: _selectedFormat,
             decoration: InputDecoration(
@@ -352,6 +352,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                   value: DownloadFormat.chapterTxt,
                   child: Text('TXT (分章节)'),
                 ),
+              const DropdownMenuItem(
+                value: DownloadFormat.epub,
+                child: Text('EPUB'),
+              ),
             ],
             onChanged: downloadState.isDownloading
                 ? null

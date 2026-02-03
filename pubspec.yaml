@@ -51,22 +51,23 @@ dependencies:
   file_picker: ^10.2.0         # 允许用户选择保存位置
   file_saver: ^0.3.1           # 用于在web端保存文件
   permission_handler: ^12.0.1  # 处理存储权限 (尤其在 Android)
-  open_file: ^3.5.10
+  open_file: ^3.5.10           # 用于打开下载后的文件
 
   # 其他工具
   path: ^1.8.3                 # 提供了平台无关的路径操作
   flutter_staggered_grid_view: ^0.7.0 # 用于创建复杂的响应式网格布局
-  window_size: ^0.1.0
-  url_launcher: ^6.0.0
-  package_info_plus: ^9.0.0
-  device_info_plus: ^12.3.0
+  window_size: ^0.1.0          # 用于设置桌面应用窗口大小
+  url_launcher: ^6.0.0         # 用于打开外部链接
+  package_info_plus: ^9.0.0    # 获取应用包信息
+  device_info_plus: ^12.3.0    # 获取设备信息
+  xml: ^6.6.1                  # 用于解析 XML 数据
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
-  change_app_package_name: ^1.5.0
-  flutter_launcher_icons: "^0.14.4"
+  flutter_lints: ^6.0.0        # 推荐的 Flutter 代码规范
+  change_app_package_name: ^1.5.0          # 用于更改应用包名
+  flutter_launcher_icons: "^0.14.4"        # 用于生成应用图标
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -101,7 +102,6 @@ flutter:
         - asset: assets/fonts/HarmonyOS_Sans_SC_Medium.ttf
           weight: 400
         - asset: assets/fonts/HarmonyOS_Sans_SC_Bold.ttf
-          # 700 代表粗体 (bold)
           weight: 700
   #
   # For details regarding fonts from package dependencies,

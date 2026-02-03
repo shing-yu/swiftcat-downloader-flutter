@@ -414,8 +414,131 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
 
   Widget _buildDownloadControls(Book book) {
     final downloadState = ref.watch(downloadProvider);
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
-    // 创建格式选项列表
+    // 移动设备使用底部操作栏风格
+    if (isMobile) {
+      return Column(
+        children: [
+          // 当前选择的格式显示区域
+          GestureDetector(
+            onTap: downloadState.isDownloading
+                ? null
+                : () => _showFormatSelectionDialog(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  // 格式图标
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getFormatIcon(_selectedFormat),
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  // 格式信息
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '下载格式',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _getFormatLabel(_selectedFormat),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 下拉箭头
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: downloadState.isDownloading
+                        ? Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.3)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 下载按钮
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: downloadState.isDownloading
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.download),
+              label: Text(
+                downloadState.isDownloading
+                    ? '下载中... ${(downloadState.progress * 100).toStringAsFixed(0)}%'
+                    : '开始下载',
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              onPressed: downloadState.isDownloading
+                  ? null
+                  : () => _startDownload(book),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 2,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 桌面端布局保持不变
     final List<ButtonSegment<DownloadFormat>> segments = [
       const ButtonSegment<DownloadFormat>(
         value: DownloadFormat.singleTxt,
@@ -451,15 +574,32 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     );
 
     final downloadButton = ElevatedButton.icon(
-      icon: const Icon(Icons.download),
-      label: const Text('开始下载'),
+      icon: downloadState.isDownloading
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+            )
+          : const Icon(Icons.download),
+      label: Text(
+        downloadState.isDownloading
+            ? '下载中... ${(downloadState.progress * 100).toStringAsFixed(0)}%'
+            : '开始下载',
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
       onPressed: downloadState.isDownloading
           ? null
           : () => _startDownload(book),
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
 
@@ -506,6 +646,209 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           );
         }
       },
+    );
+  }
+
+  // 辅助方法：获取格式图标
+  IconData _getFormatIcon(DownloadFormat format) {
+    switch (format) {
+      case DownloadFormat.singleTxt:
+        return Icons.insert_drive_file;
+      case DownloadFormat.chapterTxt:
+        return Icons.folder;
+      case DownloadFormat.epub:
+        return Icons.menu_book;
+    }
+  }
+
+  // 辅助方法：获取格式标签
+  String _getFormatLabel(DownloadFormat format) {
+    switch (format) {
+      case DownloadFormat.singleTxt:
+        return '单文件TXT';
+      case DownloadFormat.chapterTxt:
+        return '分章节TXT';
+      case DownloadFormat.epub:
+        return 'EPUB格式';
+    }
+  }
+
+  // 显示格式选择对话框
+  void _showFormatSelectionDialog(BuildContext context) {
+    ref.read(downloadProvider);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 拖拽指示器
+                Container(
+                  margin: const EdgeInsets.only(top: 8, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // 标题
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '选择下载格式',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                        iconSize: 20,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 分隔线
+                Divider(
+                  height: 1,
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                ),
+
+                // 格式选项列表
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Column(
+                    children: [
+                      // 单文件TXT选项
+                      _buildFormatOptionItem(
+                        context,
+                        DownloadFormat.singleTxt,
+                        Icons.insert_drive_file,
+                        '单文件TXT',
+                        '将所有章节合并为一个TXT文件',
+                      ),
+
+                      // 分章节TXT选项（非Web平台）
+                      if (!kIsWeb)
+                        _buildFormatOptionItem(
+                          context,
+                          DownloadFormat.chapterTxt,
+                          Icons.folder,
+                          '分章节TXT',
+                          '每个章节保存为单独的TXT文件',
+                        ),
+
+                      // EPUB选项
+                      _buildFormatOptionItem(
+                        context,
+                        DownloadFormat.epub,
+                        Icons.menu_book,
+                        'EPUB格式',
+                        '标准电子书格式，支持封面和目录',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 构建格式选项列表项
+  Widget _buildFormatOptionItem(
+    BuildContext context,
+    DownloadFormat format,
+    IconData icon,
+    String title,
+    String description,
+  ) {
+    final bool isSelected = _selectedFormat == format;
+    final downloadState = ref.read(downloadProvider);
+
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.onSurface,
+        ),
+      ),
+      subtitle: Text(
+        description,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            )
+          : null,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      onTap: downloadState.isDownloading
+          ? null
+          : () {
+              setState(() {
+                _selectedFormat = format;
+              });
+              Navigator.pop(context);
+            },
     );
   }
 }

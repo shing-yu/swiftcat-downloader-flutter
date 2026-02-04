@@ -15,7 +15,6 @@ int _parseInt(dynamic value) {
   return 0;
 }
 
-
 class Book {
   final String bookId;
   final String title;
@@ -56,13 +55,13 @@ class Book {
 
   Book copyWith({List<BookChapter>? catalog}) {
     return Book(
-      bookId: this.bookId,
-      title: this.title,
-      author: this.author,
-      intro: this.intro,
-      wordsNum: this.wordsNum,
-      tags: this.tags,
-      imgUrl: this.imgUrl,
+      bookId: bookId,
+      title: title,
+      author: author,
+      intro: intro,
+      wordsNum: wordsNum,
+      tags: tags,
+      imgUrl: imgUrl,
       catalog: catalog ?? this.catalog,
     );
   }
@@ -101,15 +100,15 @@ class SearchResultBook {
 
   factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
     // Helper function to remove HTML tags
-    String _removeHtmlTags(String htmlText) {
+    String removeHtmlTags(String htmlText) {
       RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
       return htmlText.replaceAll(exp, '');
     }
 
     return SearchResultBook(
       id: json['id']?.toString() ?? '',
-      title: _removeHtmlTags(json['title'] ?? '无书名'),
-      author: _removeHtmlTags(json['author'] ?? '未知作者'),
+      title: removeHtmlTags(json['title'] ?? '无书名'),
+      author: removeHtmlTags(json['author'] ?? '未知作者'),
       isOver: json['is_over'] == '1',
     );
   }

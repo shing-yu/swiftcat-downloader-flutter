@@ -85,8 +85,6 @@ class EpubBuilder {
     final zipEncoder = ZipEncoder();
     final zipData = zipEncoder.encode(archive);
 
-    // ZipEncoder.encode() 返回 List<int>?，但根据 archive 库的实现，当传入有效的 Archive 时不会返回 null
-    // 移除不必要的 null 检查，使用非空断言
     return Uint8List.fromList(zipData);
   }
 
@@ -95,25 +93,22 @@ class EpubBuilder {
     // 重置资源
     _resources.clear();
 
-    // 1. 样式表
-    _resources['OEBPS/styles.css'] = _createStylesheet();
-
-    // 2. 封面图片 (如果有)
+    // 1. 封面图片 (如果有)
     if (coverImageData != null) {
       _resources['OEBPS/images/cover.jpg'] = coverImageData!;
     }
 
-    // 3. 章节XHTML文件
+    // 2. 章节XHTML文件
     for (int i = 0; i < chapters.length; i++) {
       final chapter = chapters[i];
       final filename = 'OEBPS/chapter${i + 1}.xhtml';
       _resources[filename] = _createChapterXhtml(chapter, i + 1);
     }
 
-    // 4. OPF文件 (content.opf)
+    // 3. OPF文件 (content.opf)
     _resources['OEBPS/content.opf'] = _createOpfFile();
 
-    // 5. NCX文件 (toc.ncx)
+    // 4. NCX文件 (toc.ncx)
     _resources['OEBPS/toc.ncx'] = _createNcxFile();
   }
 
@@ -147,113 +142,6 @@ class EpubBuilder {
     return document.toXmlString(pretty: true);
   }
 
-  /// 创建样式表
-  String _createStylesheet() {
-    return '''
-/* 基础样式 */
-body {
-    font-family: "Microsoft YaHei", "SimSun", serif;
-    font-size: 1em;
-    line-height: 1.6;
-    margin: 0;
-    padding: 1em;
-    color: #333;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-/* 标题样式 */
-h1, h2, h3 {
-    font-family: "Microsoft YaHei", "SimHei", sans-serif;
-    color: #222;
-    text-align: center;
-    page-break-before: always;
-}
-
-h1 {
-    font-size: 1.8em;
-    margin: 2em 0 1em;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 0.5em;
-}
-
-h2 {
-    font-size: 1.5em;
-    margin: 1.5em 0 0.8em;
-}
-
-h3 {
-    font-size: 1.2em;
-    margin: 1.2em 0 0.6em;
-}
-
-/* 段落样式 */
-p {
-    text-indent: 2em;
-    margin: 0.8em 0;
-    text-align: justify;
-    line-height: 1.8;
-}
-
-/* 首段不缩进 */
-p.first-para {
-    text-indent: 0;
-}
-
-/* 引用块 */
-blockquote {
-    margin: 1.5em 2em;
-    padding: 0.5em 1em;
-    border-left: 3px solid #ccc;
-    color: #666;
-    font-style: italic;
-    background-color: #f9f9f9;
-}
-
-/* 图片 */
-img {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 1em auto;
-}
-
-/* 列表 */
-ul, ol {
-    margin: 1em 2em;
-    padding-left: 1em;
-}
-
-li {
-    margin: 0.5em 0;
-}
-
-/* 水平线 */
-hr {
-    border: none;
-    border-top: 1px solid #ddd;
-    margin: 2em 0;
-}
-
-/* 页眉页脚 */
-.header, .footer {
-    text-align: center;
-    font-size: 0.9em;
-    color: #999;
-    margin: 1em 0;
-}
-
-/* 分页控制 */
-.page-break {
-    page-break-before: always;
-}
-
-.no-break {
-    page-break-inside: avoid;
-}
-''';
-  }
-
   /// 创建章节XHTML文件
   String _createChapterXhtml(EpubChapter chapter, int chapterNum) {
     final builder = xml.XmlBuilder();
@@ -271,14 +159,6 @@ hr {
           nest: () {
             builder.element('title', nest: chapter.title);
             builder.element(
-              'link',
-              attributes: {
-                'href': 'styles.css',
-                'rel': 'stylesheet',
-                'type': 'text/css',
-              },
-            );
-            builder.element(
               'meta',
               attributes: {
                 'http-equiv': 'Content-Type',
@@ -294,19 +174,12 @@ hr {
             // 章节标题
             builder.element('h1', nest: chapter.title);
 
-            // 章节内容
+            // 章节内容 - 使用简单的段落结构，让阅读器自行处理样式
             final paragraphs = chapter.content.split('\n');
             for (int i = 0; i < paragraphs.length; i++) {
               final para = paragraphs[i].trim();
               if (para.isNotEmpty) {
-                final attributes = i == 0
-                    ? {'class': 'first-para'}
-                    : <String, String>{};
-                builder.element(
-                  'p',
-                  attributes: attributes,
-                  nest: _escapeXml(para),
-                );
+                builder.element('p', nest: _escapeXml(para));
               }
             }
           },
@@ -369,16 +242,6 @@ hr {
                 'id': 'ncx',
                 'href': 'toc.ncx',
                 'media-type': 'application/x-dtbncx+xml',
-              },
-            );
-
-            // 样式表
-            builder.element(
-              'item',
-              attributes: {
-                'id': 'css',
-                'href': 'styles.css',
-                'media-type': 'text/css',
               },
             );
 

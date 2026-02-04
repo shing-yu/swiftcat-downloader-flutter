@@ -431,7 +431,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.2),
                   width: 1,
                 ),
               ),
@@ -443,7 +445,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.primary.withOpacity(0.1),
+                      ).colorScheme.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -485,7 +487,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                     color: downloadState.isDownloading
                         ? Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.3)
+                          ).colorScheme.onSurface.withValues(alpha: 0.3)
                         : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ],
@@ -710,7 +712,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.2),
+                    ).colorScheme.onSurface.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -741,7 +743,9 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                 // 分隔线
                 Divider(
                   height: 1,
-                  color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.1),
                 ),
 
                 // 格式选项列表
@@ -805,7 +809,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),

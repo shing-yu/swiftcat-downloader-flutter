@@ -151,7 +151,8 @@ class EpubBuilder {
         );
       },
     );
-    return '<?xml version="1.0" encoding="UTF-8"?>\n${builder.buildDocument().toXmlString(pretty: true)}';
+    // 移除了重复的 XML 声明
+    return builder.buildDocument().toXmlString(pretty: true);
   }
 
   String _createOpfFile() {

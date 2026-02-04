@@ -9,7 +9,6 @@ import '../widgets/search_result_view.dart';
 import '../../globals.dart';
 import 'book_detail_screen.dart';
 
-// ============== 响应式布局组件 ==============
 class ResponsiveLayout extends StatelessWidget {
   final Widget mobileBody;
   final Widget desktopBody;
@@ -23,36 +22,24 @@ class ResponsiveLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 600) {
-          return mobileBody;
-        } else {
-          return desktopBody;
-        }
-      },
+      builder: (context, constraints) =>
+          constraints.maxWidth < 600 ? mobileBody : desktopBody,
     );
   }
 }
 
-// ============== 主屏幕 ==============
 String? _parseBookIdInput(String input) {
   final pureDigitsRegex = RegExp(r'^\d+$');
   final qimaoUrlRegex = RegExp(r'www\.qimao\.com/shuku/(\d+)');
   final wtzwUrlRegex = RegExp(r'app-share\.wtzw\.com/article-detail/(\d+)');
 
-  if (pureDigitsRegex.hasMatch(input)) {
-    return input;
-  }
+  if (pureDigitsRegex.hasMatch(input)) return input;
 
   RegExpMatch? qimaoMatch = qimaoUrlRegex.firstMatch(input);
-  if (qimaoMatch != null) {
-    return qimaoMatch.group(1);
-  }
+  if (qimaoMatch != null) return qimaoMatch.group(1);
 
   RegExpMatch? wtzwMatch = wtzwUrlRegex.firstMatch(input);
-  if (wtzwMatch != null) {
-    return wtzwMatch.group(1);
-  }
+  if (wtzwMatch != null) return wtzwMatch.group(1);
 
   return null;
 }
@@ -82,11 +69,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final bool isMobile = MediaQuery.of(context).size.width < 600;
 
     if (parsedId != null) {
-      if (parsedId != rawInput) {
-        _searchController.text = parsedId;
-      }
+      if (parsedId != rawInput) _searchController.text = parsedId;
       ref.read(bookProvider.notifier).fetchBook(parsedId);
-      ref.read(searchProvider.notifier).clearSearch();
+      ref.read(searchProvider.notifier).searchBooks('');
 
       if (isMobile && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,9 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final Brightness currentBrightness = Theme.of(context).brightness;
 
-    void performSearch() {
-      _performSearch(context);
-    }
+    void performSearch() => _performSearch(context);
 
     final searchBar = Padding(
       padding: const EdgeInsets.all(16.0),
@@ -125,7 +108,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           labelStyle: TextStyle(color: colorScheme.onSurfaceVariant),
           hintText: '输入小说ID、链接或关键词',
           hintStyle: TextStyle(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            color: colorScheme.onSurfaceVariant.withAlpha(178),
           ),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(24.0)),
           suffixIcon: IconButton(
@@ -150,68 +133,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: colorScheme.onSurface,
             ),
             tooltip: '切换模式',
-            onPressed: () {
-              ref.read(themeProvider.notifier).toggleTheme(currentBrightness);
-            },
+            onPressed: () =>
+                ref.read(themeProvider.notifier).toggleTheme(currentBrightness),
           ),
           IconButton(
             icon: Icon(Icons.info_outline, color: colorScheme.onSurface),
             tooltip: '关于',
-            onPressed: () {
-              showAboutDialog(
-                context: context,
-                applicationName: '灵猫小说下载器 flutter',
-                applicationVersion:
-                    'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
-                applicationIcon: Image.asset(
-                  'assets/logo.png',
-                  width: 35,
-                  height: 35,
-                ),
-                applicationLegalese: '© 2025 StarEdge Studio\n基于原Python项目重构',
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurface,
-                        ),
-                        children: <TextSpan>[
-                          const TextSpan(text: 'flutter版本是技术测试版本\n'),
-                          const TextSpan(text: '此应用为学习和技术演示目的而创建\n基于 '),
-                          TextSpan(
-                            text: 'SSLA 1.0',
-                            style: TextStyle(color: colorScheme.primary),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                launchUrl(
-                                  Uri.parse('https://staredges.cn/ssla-1.0/'),
-                                );
-                              },
-                          ),
-                          const TextSpan(text: ' 许可发布\n禁止用于商业用途或盈利性活动\n'),
-                          const TextSpan(text: '本软件免费提供，谨防上当受骗\n'),
-                          TextSpan(
-                            text: '源代码仓库',
-                            style: TextStyle(color: colorScheme.primary),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                launchUrl(
-                                  Uri.parse(
-                                    'https://github.com/shing-yu/swiftcat-downloader-flutter',
-                                  ),
-                                );
-                              },
-                          ),
-                        ],
+            onPressed: () => showAboutDialog(
+              context: context,
+              applicationName: '灵猫小说下载器 flutter',
+              applicationVersion:
+                  'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
+              applicationIcon: Image.asset(
+                'assets/logo.png',
+                width: 35,
+                height: 35,
+              ),
+              applicationLegalese: '© 2025 StarEdge Studio\n基于原Python项目重构',
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
                       ),
+                      children: <TextSpan>[
+                        const TextSpan(
+                          text: 'flutter版本是技术测试版本\n此应用为学习和技术演示目的而创建\n基于 ',
+                        ),
+                        TextSpan(
+                          text: 'SSLA 1.0',
+                          style: TextStyle(color: colorScheme.primary),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => launchUrl(
+                              Uri.parse('https://staredges.cn/ssla-1.0/'),
+                            ),
+                        ),
+                        const TextSpan(
+                          text: ' 许可发布\n禁止用于商业用途或盈利性活动\n本软件免费提供，谨防上当受骗\n',
+                        ),
+                        TextSpan(
+                          text: '源代码仓库',
+                          style: TextStyle(color: colorScheme.primary),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () => launchUrl(
+                              Uri.parse(
+                                'https://github.com/shing-yu/swiftcat-downloader-flutter',
+                              ),
+                            ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -226,7 +204,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: Consumer(
                       builder: (context, ref, child) {
                         final searchState = ref.watch(searchProvider);
-                        final searchKeyword = ref.watch(searchKeywordProvider);
+                        // 只在需要时获取 searchKeyword
+                        final hasSearchKeyword = ref
+                            .watch(searchKeywordProvider)
+                            .isNotEmpty;
 
                         if (searchState.isLoading) {
                           return Center(
@@ -235,7 +216,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           );
                         }
-
                         if (searchState.error != null) {
                           return Center(
                             child: Text(
@@ -244,18 +224,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             ),
                           );
                         }
-
                         if (searchState.searchResults.isEmpty) {
-                          if (searchKeyword.isNotEmpty) {
-                            return Center(
-                              child: Text(
-                                '没有找到与"$searchKeyword"相关的结果。',
-                                style: TextStyle(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            );
-                          }
                           return Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -267,7 +236,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '搜索您想下载的小说',
+                                  hasSearchKeyword ? '没有找到相关结果' : '搜索您想下载的小说',
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: colorScheme.onSurfaceVariant,
@@ -278,7 +247,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           );
                         }
 
-                        return SearchResultView(onResultSelected: () {});
+                        return const SearchResultView();
                       },
                     ),
                   ),
@@ -296,12 +265,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ],
                     ),
                   ),
-                  Container(
-                    width: 1,
-                    color: colorScheme.outline.withValues(alpha: 0.2),
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(child: const BookDetailView()),
+                  Container(width: 1, color: colorScheme.outline.withAlpha(51)),
+                  const Expanded(
+                    child: SingleChildScrollView(child: BookDetailView()),
                   ),
                 ],
               ),

@@ -5,7 +5,6 @@ import 'package:swiftcat_downloader/providers.dart';
 import 'package:swiftcat_downloader/ui/screens/home_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// 应用入口点
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initGlobalPackageInfo();
@@ -15,28 +14,22 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // 构建主题 - 支持动态色彩
   ThemeData _buildTheme(ColorScheme? dynamicScheme, Brightness brightness) {
-    final ColorScheme colorScheme;
-    if (dynamicScheme != null) {
-      colorScheme = dynamicScheme;
-    } else {
-      // 如果系统不支持动态颜色，使用自定义的种子颜色
-      colorScheme = ColorScheme.fromSeed(
-        seedColor: const Color(0xFF6750A4), // 紫色作为种子颜色
-        brightness: brightness,
-        primary: const Color(0xFF6750A4), // 主色
-        secondary: const Color(0xFF625B71), // 次要色
-        tertiary: const Color(0xFF7D5260), // 第三色
-        surface: brightness == Brightness.dark
-            ? const Color(0xFF1C1B1F)
-            : const Color(0xFFFFFBFE),
-        onSurface: brightness == Brightness.dark
-            ? const Color(0xFFE6E1E5)
-            : const Color(0xFF1C1B1F),
-        // background 参数已弃用，使用 surface 代替
-      );
-    }
+    final colorScheme =
+        dynamicScheme ??
+        ColorScheme.fromSeed(
+          seedColor: const Color(0xFF6750A4),
+          brightness: brightness,
+          primary: const Color(0xFF6750A4),
+          secondary: const Color(0xFF625B71),
+          tertiary: const Color(0xFF7D5260),
+          surface: brightness == Brightness.dark
+              ? const Color(0xFF1C1B1F)
+              : const Color(0xFFFFFBFE),
+          onSurface: brightness == Brightness.dark
+              ? const Color(0xFFE6E1E5)
+              : const Color(0xFF1C1B1F),
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -56,7 +49,7 @@ class MyApp extends StatelessWidget {
       listTileTheme: ListTileThemeData(
         tileColor: colorScheme.surface,
         selectedColor: colorScheme.primary,
-        selectedTileColor: colorScheme.primary.withValues(alpha: 0.1),
+        selectedTileColor: colorScheme.primary.withAlpha(25),
         iconColor: colorScheme.onSurfaceVariant,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -77,7 +70,7 @@ class MyApp extends StatelessWidget {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        fillColor: colorScheme.surfaceContainerHighest.withAlpha(127),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.outline),
@@ -96,11 +89,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 关键：在最外层包裹 ProviderScope
     return ProviderScope(
       child: DynamicColorBuilder(
         builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-          // 返回一个 Consumer 来获取主题状态
           return Consumer(
             builder: (context, ref, _) {
               final themeMode = ref.watch(themeProvider);

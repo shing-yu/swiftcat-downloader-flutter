@@ -1,17 +1,11 @@
-// 辅助函数：将动态类型转换为int
 int _parseInt(dynamic value) {
   if (value == null) return 0;
   if (value is int) return value;
-  if (value is String) {
-    return int.tryParse(value) ?? 0;
-  }
-  if (value is num) {
-    return value.toInt();
-  }
+  if (value is String) return int.tryParse(value) ?? 0;
+  if (value is num) return value.toInt();
   return 0;
 }
 
-// 书籍模型，包含书籍的基本信息和目录
 class Book {
   final String bookId;
   final String title;
@@ -33,7 +27,6 @@ class Book {
     this.catalog = const [],
   });
 
-  // 从API JSON数据构造Book对象
   factory Book.fromJson(Map<String, dynamic> json) {
     var bookData = json['data']['book'];
     List<dynamic> tagList = bookData['book_tag_list'] ?? [];
@@ -49,7 +42,6 @@ class Book {
     );
   }
 
-  // 复制并更新目录（用于添加章节列表）
   Book copyWith({List<BookChapter>? catalog}) {
     return Book(
       bookId: bookId,
@@ -64,7 +56,6 @@ class Book {
   }
 }
 
-// 书籍章节模型
 class BookChapter {
   final String id;
   final String title;
@@ -72,7 +63,6 @@ class BookChapter {
 
   BookChapter({required this.id, required this.title, required this.sort});
 
-  // 从API JSON数据构造BookChapter对象
   factory BookChapter.fromJson(Map<String, dynamic> json) {
     return BookChapter(
       id: json['id']?.toString() ?? '',
@@ -82,7 +72,6 @@ class BookChapter {
   }
 }
 
-// 搜索结果书籍模型（简略信息）
 class SearchResultBook {
   final String id;
   final String title;
@@ -96,9 +85,7 @@ class SearchResultBook {
     required this.isOver,
   });
 
-  // 从搜索API JSON数据构造SearchResultBook对象，移除HTML标签
   factory SearchResultBook.fromSearchJson(Map<String, dynamic> json) {
-    // 移除HTML标签的辅助函数
     String removeHtmlTags(String htmlText) {
       RegExp exp = RegExp(r"<[^>]*>", multiLine: true, caseSensitive: true);
       return htmlText.replaceAll(exp, '');

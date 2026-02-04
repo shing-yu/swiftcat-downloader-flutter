@@ -3,21 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/book_detail_view.dart';
 import '../../providers.dart';
 
-class BookDetailScreen extends ConsumerStatefulWidget {
+class BookDetailScreen extends ConsumerWidget {
   const BookDetailScreen({super.key});
 
   @override
-  ConsumerState<BookDetailScreen> createState() => _BookDetailScreenState();
-}
-
-class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bookState = ref.watch(bookProvider);
 
     return Scaffold(
@@ -30,7 +20,6 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // 返回前清理选中的书籍ID
             ref.read(selectedBookIdProvider.notifier).clear();
             Navigator.of(context).pop();
           },
@@ -42,7 +31,7 @@ class _BookDetailScreenState extends ConsumerState<BookDetailScreen> {
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: BookDetailView(),
+                child: const BookDetailView(),
               ),
             ),
           ),

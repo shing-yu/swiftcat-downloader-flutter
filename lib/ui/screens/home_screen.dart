@@ -78,7 +78,7 @@ class HomeScreen extends ConsumerWidget {
       final rawInput = searchController.text.trim();
       if (rawInput.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('请输入小说ID、链接或关键词')),
+          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('请输入小说ID、链接或关键词')),
         );
         return;
       }

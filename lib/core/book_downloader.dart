@@ -1,18 +1,19 @@
 // lib/core/book_downloader.dart
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
-import 'dart:io';
+
 
 import 'api_client.dart';
 import '../models/book.dart';
+import 'epub_builder.dart';
 
-// 定义下载格式的枚举
-enum DownloadFormat { singleTxt, chapterTxt }
+enum DownloadFormat { singleTxt, chapterTxt, epub }
 
 class BookDownloader {
   final ApiClient _apiClient;
@@ -27,10 +28,6 @@ class BookDownloader {
     required Function(String) onStatusUpdate,
     required Function(double) onProgressUpdate,
   }) async {
-    if (format == DownloadFormat.chapterTxt) {
-      throw UnsupportedError('Web平台不支持分章节下载。');
-    }
-
     try {
       onStatusUpdate('正在获取缓存文件链接...');
       onProgressUpdate(0.0);
@@ -46,7 +43,8 @@ class BookDownloader {
             onProgressUpdate((received / total) * 0.4); // 下载占40%进度
           }
           onStatusUpdate(
-              '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB');
+            '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
+          );
         },
       );
       final zipBytes = Uint8List.fromList(response.data!);
@@ -58,15 +56,16 @@ class BookDownloader {
 
       // 3. 解密章节
       onStatusUpdate('正在解密章节...');
-      Map<String, String> decryptedChapters = {};
+      final Map<String, String> decryptedChapters = {};
       int i = 0;
       for (var file in archive) {
         if (file.isFile) {
           final chapterId = p.basenameWithoutExtension(file.name);
           // 假设文件内容是UTF-8编码的
           final encryptedContent = utf8.decode(file.content as List<int>);
-          decryptedChapters[chapterId] =
-              _apiClient.decryptChapterContent(encryptedContent);
+          decryptedChapters[chapterId] = _apiClient.decryptChapterContent(
+            encryptedContent,
+          );
         }
         i++;
         onProgressUpdate(0.5 + (i / archive.length) * 0.2); // 解密占20%进度
@@ -78,6 +77,10 @@ class BookDownloader {
       switch (format) {
         case DownloadFormat.singleTxt:
           fileData = await _generateSingleTxtForWeb(book, decryptedChapters);
+          break;
+        case DownloadFormat.epub:
+        // 明确将 Map<String, String> 传递给 _generateEpubForWeb
+          fileData = await _generateEpubForWeb(book, decryptedChapters);
           break;
         case DownloadFormat.chapterTxt:
         // 此处已在函数开头处理，理论上不会执行到
@@ -103,11 +106,14 @@ class BookDownloader {
   }) async {
     // --- 新增: 如果在Web环境调用了此方法，则抛出异常 ---
     if (kIsWeb) {
-      throw UnsupportedError('downloadBook 方法不能在Web上调用，请使用 downloadBookForWeb。');
+      throw UnsupportedError(
+        'downloadBook 方法不能在Web上调用，请使用 downloadBookForWeb。',
+      );
     }
     // 创建一个唯一的临时目录，避免冲突
     final tempDir = await Directory.systemTemp.createTemp(
-        'book_downloader_${book.bookId}_');
+      'book_downloader_${book.bookId}_',
+    );
 
     try {
       onStatusUpdate('正在获取缓存文件链接...');
@@ -124,8 +130,8 @@ class BookDownloader {
             onProgressUpdate((received / total) * 0.4); // 下载占40%进度
           }
           onStatusUpdate(
-              '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(
-                  2)}MB');
+            '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
+          );
         },
       );
 
@@ -153,14 +159,15 @@ class BookDownloader {
       // 3. 解密章节
       onStatusUpdate('正在解密章节...');
       final chapterFiles = await extractDir.list().toList();
-      Map<String, String> decryptedChapters = {};
+      final Map<String, String> decryptedChapters = {};
       for (int i = 0; i < chapterFiles.length; i++) {
         var fileEntity = chapterFiles[i];
         if (fileEntity is File) {
           final chapterId = p.basenameWithoutExtension(fileEntity.path);
           final encryptedContent = await fileEntity.readAsString();
-          decryptedChapters[chapterId] =
-              _apiClient.decryptChapterContent(encryptedContent);
+          decryptedChapters[chapterId] = _apiClient.decryptChapterContent(
+            encryptedContent,
+          );
         }
         onProgressUpdate(0.5 + (i / chapterFiles.length) * 0.2); // 解密占20%进度
       }
@@ -170,6 +177,9 @@ class BookDownloader {
       switch (format) {
         case DownloadFormat.singleTxt:
           await _generateSingleTxt(book, decryptedChapters, savePath);
+          break;
+        case DownloadFormat.epub:
+          await _generateEpub(book, decryptedChapters, savePath);
           break;
         case DownloadFormat.chapterTxt:
           await _generateChapterTxts(book, decryptedChapters, savePath);
@@ -197,7 +207,10 @@ class BookDownloader {
   }
 
   // --- 新增: 为Web生成TXT文件内容的方法 ---
-  Future<Uint8List> _generateSingleTxtForWeb(Book book, Map<String, String> chapters) async {
+  Future<Uint8List> _generateSingleTxtForWeb(
+      Book book,
+      Map<String, String> chapters,
+      ) async {
     final buffer = StringBuffer();
     buffer.writeln('标题: ${book.title}');
     buffer.writeln('作者: ${book.author}');
@@ -213,9 +226,11 @@ class BookDownloader {
     return utf8.encode(buffer.toString());
   }
 
-
-  Future<void> _generateSingleTxt(Book book, Map<String, String> chapters,
-      String path) async {
+  Future<void> _generateSingleTxt(
+      Book book,
+      Map<String, String> chapters,
+      String path,
+      ) async {
     final buffer = StringBuffer();
     buffer.writeln('标题: ${book.title}');
     buffer.writeln('作者: ${book.author}');
@@ -230,17 +245,86 @@ class BookDownloader {
     await File(path).writeAsString(buffer.toString());
   }
 
-  Future<void> _generateChapterTxts(Book book, Map<String, String> chapters,
-      String dirPath) async {
+  Future<void> _generateChapterTxts(
+      Book book,
+      Map<String, String> chapters,
+      String dirPath,
+      ) async {
     final bookDir = Directory(p.join(dirPath, _sanitizeFilename(book.title)));
     await bookDir.create(recursive: true);
 
     for (var chapterMeta in book.catalog) {
       if (chapters.containsKey(chapterMeta.id)) {
-        final chapterFile = File(p.join(
-            bookDir.path, '${_sanitizeFilename(chapterMeta.title)}.txt'));
+        final chapterFile = File(
+          p.join(bookDir.path, '${_sanitizeFilename(chapterMeta.title)}.txt'),
+        );
         await chapterFile.writeAsString(chapters[chapterMeta.id]!);
       }
+    }
+  }
+
+  // ==================== EPUB 生成核心函数 ====================
+
+  // 为Web平台生成EPUB文件（返回字节数组）
+  Future<Uint8List> _generateEpubForWeb(
+      Book book,
+      Map<String, String> chapters,
+      ) async {
+    // 创建EPUB构建器
+    final epubBuilder = EpubBuilder(
+      title: book.title,
+      author: book.author,
+      identifier: 'book-${book.bookId}',
+      language: 'zh-CN',
+    );
+
+    // 下载封面图片
+    if (book.imgUrl.isNotEmpty) {
+      try {
+        final imageData = await _downloadImageForWeb(book.imgUrl);
+        if (imageData != null) {
+          epubBuilder.setCoverImage(imageData);
+        }
+      } catch (e) {
+        print('下载封面失败: $e');
+      }
+    }
+
+    // 添加章节
+    for (var chapterMeta in book.catalog) {
+      if (chapters.containsKey(chapterMeta.id)) {
+        final chapterContent = chapters[chapterMeta.id]!;
+        epubBuilder.addChapter(
+          EpubChapter(title: chapterMeta.title, content: chapterContent),
+        );
+      }
+    }
+
+    // 构建EPUB
+    return epubBuilder.build();
+  }
+
+  // 生成EPUB文件并保存到本地路径
+  Future<void> _generateEpub(
+      Book book,
+      Map<String, String> chapters,
+      String path,
+      ) async {
+    final epubData = await _generateEpubForWeb(book, chapters);
+    await File(path).writeAsBytes(epubData);
+  }
+
+  // 下载封面图片（Web版本）
+  Future<List<int>?> _downloadImageForWeb(String url) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data;
+    } catch (e) {
+      print('Failed to download cover image: $e');
+      return null;
     }
   }
 }

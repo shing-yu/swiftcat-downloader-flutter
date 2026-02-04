@@ -28,6 +28,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: 3.38.3
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -69,6 +70,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: 3.38.3
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -97,6 +99,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: 3.38.3
       - run: flutter pub get
       - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
@@ -134,6 +139,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: 3.38.3
       - run: flutter pub get
       - run: flutter build macos --release # Flutter 默认构建 Universal Binary
       - uses: actions/upload-artifact@v4
@@ -152,6 +160,9 @@ jobs:
       - name: Install Linux dependencies
         run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev
       - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          flutter-version: 3.38.3
       - run: flutter pub get
       - run: flutter build linux --release
       - uses: actions/upload-artifact@v4

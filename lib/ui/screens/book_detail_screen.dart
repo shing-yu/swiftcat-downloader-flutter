@@ -20,10 +20,24 @@ class BookDetailScreen extends ConsumerWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
+            // 返回前清理选中的书籍ID
             ref.read(selectedBookIdProvider.notifier).clear();
             Navigator.of(context).pop();
           },
         ),
+        actions: [
+          // 只在下载时显示取消按钮
+          if (ref.watch(downloadProvider).isDownloading)
+            TextButton(
+              onPressed: () {
+                ref.read(downloadProvider.notifier).cancelDownload();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('取消下载'),
+            ),
+        ],
       ),
       body: Column(
         children: [

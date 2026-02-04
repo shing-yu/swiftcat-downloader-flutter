@@ -339,33 +339,59 @@ class BookDownloader {
     required DownloadFormat format,
     required Function(String) onStatusUpdate,
     required Function(double) onProgressUpdate,
+    required bool Function() shouldContinue,
   }) async {
     try {
       onStatusUpdate('正在获取缓存文件链接...');
       onProgressUpdate(0.0);
+
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
       final zipLink = await _apiClient.getCacheZipLink(book.bookId);
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 下载ZIP文件
       onStatusUpdate('正在下载缓存文件...');
       final response = await _dio.get<List<int>>(
         zipLink,
         options: Options(responseType: ResponseType.bytes),
         onReceiveProgress: (received, total) {
-          if (total != -1) onProgressUpdate((received / total) * 0.4);
+          if (total != -1) {
+            onProgressUpdate((received / total) * 0.4);
+          }
           onStatusUpdate(
             '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
           );
+          // 检查是否应该继续
+          if (!shouldContinue()) {
+            throw Exception('下载已取消');
+          }
         },
       );
       final zipBytes = Uint8List.fromList(response.data!);
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 解压ZIP
       onStatusUpdate('正在解压文件...');
       final archive = ZipDecoder().decodeBytes(zipBytes);
       onProgressUpdate(0.5);
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 解密每个章节
       onStatusUpdate('正在解密章节...');
       final Map<String, String> decryptedChapters = {};
       int i = 0;
       for (var file in archive) {
+        // 检查是否应该继续
+        _checkContinue(shouldContinue);
+
         if (file.isFile) {
           final chapterId = p.basenameWithoutExtension(file.name);
           final encryptedContent = utf8.decode(file.content as List<int>);
@@ -377,6 +403,10 @@ class BookDownloader {
         onProgressUpdate(0.5 + (i / archive.length) * 0.2);
       }
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 生成最终文件
       onStatusUpdate('正在生成文件...');
       Uint8List fileData;
       switch (format) {
@@ -393,8 +423,12 @@ class BookDownloader {
       onStatusUpdate('下载完成！');
       return fileData;
     } catch (e) {
-      onStatusUpdate('下载失败: $e');
-      debugPrint('Web download failed: $e');
+      if (e.toString().contains('下载已取消')) {
+        onStatusUpdate('下载已取消');
+      } else {
+        onStatusUpdate('下载失败: $e');
+        debugPrint('Web download failed: $e');
+      }
       rethrow;
     }
   }
@@ -405,6 +439,7 @@ class BookDownloader {
     required String savePath,
     required Function(String) onStatusUpdate,
     required Function(double) onProgressUpdate,
+    required bool Function() shouldContinue,
   }) async {
     if (kIsWeb) {
       throw UnsupportedError(
@@ -419,27 +454,46 @@ class BookDownloader {
     try {
       onStatusUpdate('正在获取缓存文件链接...');
       onProgressUpdate(0.0);
+
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
       final zipLink = await _apiClient.getCacheZipLink(book.bookId);
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 下载ZIP文件到临时目录
       final zipFilePath = p.join(tempDir.path, '${book.bookId}.zip');
       await _dio.download(
         zipLink,
         zipFilePath,
         onReceiveProgress: (received, total) {
-          if (total != -1) onProgressUpdate((received / total) * 0.4);
+          if (total != -1) {
+            onProgressUpdate((received / total) * 0.4);
+          }
           onStatusUpdate(
             '正在下载缓存文件... ${(received / 1024 / 1024).toStringAsFixed(2)}MB',
           );
+          // 检查是否应该继续
+          if (!shouldContinue()) {
+            throw Exception('下载已取消');
+          }
         },
       );
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 解压ZIP文件
       onStatusUpdate('正在解压文件...');
       final extractDir = Directory(p.join(tempDir.path, 'extracted'));
       await extractDir.create();
 
       final zipBytes = await File(zipFilePath).readAsBytes();
-      final archive = ZipDecoder().decodeBytes(zipBytes);
+      final archive = ZipDecoder().decodeBytes(zipBytes); // 这行声明了archive变量
 
+      // 遍历并解压所有文件 - 这里使用了archive变量
       for (var file in archive) {
         final filename = p.join(extractDir.path, file.name);
         if (file.isFile) {
@@ -448,12 +502,20 @@ class BookDownloader {
           await outFile.writeAsBytes(file.content as List<int>);
         }
       }
+
       onProgressUpdate(0.5);
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 解密每个章节文件
       onStatusUpdate('正在解密章节...');
       final chapterFiles = await extractDir.list().toList();
       final Map<String, String> decryptedChapters = {};
       for (int i = 0; i < chapterFiles.length; i++) {
+        // 检查是否应该继续
+        _checkContinue(shouldContinue);
+
         var fileEntity = chapterFiles[i];
         if (fileEntity is File) {
           final chapterId = p.basenameWithoutExtension(fileEntity.path);
@@ -465,6 +527,10 @@ class BookDownloader {
         onProgressUpdate(0.5 + (i / chapterFiles.length) * 0.2);
       }
 
+      // 检查是否应该继续
+      _checkContinue(shouldContinue);
+
+      // 根据格式生成最终文件
       onStatusUpdate('正在生成文件...');
       switch (format) {
         case DownloadFormat.singleTxt:
@@ -480,11 +546,23 @@ class BookDownloader {
       onProgressUpdate(1.0);
       onStatusUpdate('下载完成！');
     } catch (e) {
-      onStatusUpdate('下载失败: $e');
-      debugPrint('Download failed: $e');
+      if (e.toString().contains('下载已取消')) {
+        onStatusUpdate('下载已取消');
+      } else {
+        onStatusUpdate('下载失败: $e');
+        debugPrint('Download failed: $e');
+      }
       rethrow;
     } finally {
+      // 清理临时目录
       if (await tempDir.exists()) await tempDir.delete(recursive: true);
+    }
+  }
+
+  // 辅助方法：检查是否应该继续
+  void _checkContinue(bool Function() shouldContinue) {
+    if (!shouldContinue()) {
+      throw Exception('下载已取消');
     }
   }
 

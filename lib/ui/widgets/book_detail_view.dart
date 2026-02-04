@@ -25,7 +25,7 @@ class StatusBar extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
         border: Border(
@@ -42,15 +42,41 @@ class StatusBar extends ConsumerWidget {
             ),
           ),
           if (downloadState.isDownloading)
-            SizedBox(
-              width: 120,
-              child: LinearProgressIndicator(
-                value: downloadState.progress,
-                minHeight: 6,
-                borderRadius: BorderRadius.circular(3),
-                color: colorScheme.primary,
-                backgroundColor: colorScheme.surfaceContainerHighest,
-              ),
+            Row(
+              children: [
+                SizedBox(
+                  width: 120,
+                  child: LinearProgressIndicator(
+                    value: downloadState.progress,
+                    minHeight: 6,
+                    borderRadius: BorderRadius.circular(3),
+                    color: colorScheme.primary,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: () {
+                    ref.read(downloadProvider.notifier).cancelDownload();
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: Text(
+                    '取消下载',
+                    style: TextStyle(
+                      color: colorScheme.error,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
         ],
       ),
@@ -86,6 +112,11 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
   }
 
   Future<void> _startDownload(Book book) async {
+    // 如果已经取消，重置状态
+    if (ref.read(downloadProvider).isCancelled) {
+      ref.read(downloadProvider.notifier).resetDownload();
+    }
+
     String? outputPath;
     final fileName = book.title.replaceAll(RegExp(r'[/:*?"<>|]'), '_');
 
@@ -427,41 +458,48 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: downloadState.isDownloading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Theme.of(context).colorScheme.onPrimary,
-                        ),
+            child: downloadState.isDownloading
+                ? OutlinedButton(
+                    onPressed: () {
+                      ref.read(downloadProvider.notifier).cancelDownload();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                    )
-                  : const Icon(Icons.download),
-              label: Text(
-                downloadState.isDownloading
-                    ? '下载中... ${(downloadState.progress * 100).toStringAsFixed(0)}%'
-                    : '开始下载',
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-              onPressed: downloadState.isDownloading
-                  ? null
-                  : () => _startDownload(book),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 20,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-            ),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '取消下载',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  )
+                : ElevatedButton.icon(
+                    icon: downloadState.isCancelled
+                        ? const Icon(Icons.refresh)
+                        : const Icon(Icons.download),
+                    label: Text(downloadState.isCancelled ? '重新下载' : '开始下载'),
+                    onPressed: () => _startDownload(book),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
           ),
         ],
       );
@@ -515,37 +553,38 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           ],
         ),
         const Spacer(),
-        ElevatedButton.icon(
-          icon: downloadState.isDownloading
-              ? SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.onPrimary,
-                    ),
-                  ),
-                )
-              : const Icon(Icons.download),
-          label: Text(
-            downloadState.isDownloading
-                ? '下载中... ${(downloadState.progress * 100).toStringAsFixed(0)}%'
-                : '开始下载',
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
-          onPressed: downloadState.isDownloading
-              ? null
-              : () => _startDownload(book),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        if (downloadState.isDownloading)
+          OutlinedButton.icon(
+            icon: const Icon(Icons.cancel),
+            label: const Text('取消下载'),
+            onPressed: () {
+              ref.read(downloadProvider.notifier).cancelDownload();
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+              side: BorderSide(color: Theme.of(context).colorScheme.error),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          )
+        else
+          ElevatedButton.icon(
+            icon: downloadState.isCancelled
+                ? const Icon(Icons.refresh)
+                : const Icon(Icons.download),
+            label: Text(downloadState.isCancelled ? '重新下载' : '开始下载'),
+            onPressed: () => _startDownload(book),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
-        ),
       ],
     );
   }

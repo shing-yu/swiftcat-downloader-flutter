@@ -69,12 +69,14 @@ class DownloadState {
   final double progress;
   final String status;
   final Uint8List? data;
+  final bool isCancelled; // 添加取消状态
 
   DownloadState({
     this.isDownloading = false,
     this.progress = 0.0,
     this.status = '准备就绪',
     this.data,
+    this.isCancelled = false,
   });
 
   DownloadState copyWith({
@@ -82,12 +84,14 @@ class DownloadState {
     double? progress,
     String? status,
     Uint8List? data,
+    bool? isCancelled,
   }) {
     return DownloadState(
       isDownloading: isDownloading ?? this.isDownloading,
       progress: progress ?? this.progress,
       status: status ?? this.status,
       data: data ?? this.data,
+      isCancelled: isCancelled ?? this.isCancelled,
     );
   }
 }
@@ -101,9 +105,16 @@ class DownloadNotifier extends Notifier<DownloadState> {
     required DownloadFormat format,
     required String savePath,
   }) async {
+    // 如果已经在下载，则不重复开始
     if (state.isDownloading) return;
 
-    state = state.copyWith(isDownloading: true, status: '开始下载...');
+    // 重置状态
+    state = DownloadState(
+      isDownloading: true,
+      progress: 0.0,
+      status: '开始下载...',
+      isCancelled: false,
+    );
 
     try {
       final downloader = BookDownloader(ref.read(apiClientProvider));
@@ -111,32 +122,68 @@ class DownloadNotifier extends Notifier<DownloadState> {
         final fileData = await downloader.downloadBookForWeb(
           book: book,
           format: format,
-          onStatusUpdate: (status) => state = state.copyWith(status: status),
-          onProgressUpdate: (progress) =>
-              state = state.copyWith(progress: progress),
+          onStatusUpdate: (status) {
+            if (state.isDownloading) {
+              // 只有在下载状态时才更新
+              state = state.copyWith(status: status);
+            }
+          },
+          onProgressUpdate: (progress) {
+            if (state.isDownloading) {
+              // 只有在下载状态时才更新
+              state = state.copyWith(progress: progress);
+            }
+          },
+          shouldContinue: () => state.isDownloading, // 检查是否应该继续
         );
-        state = state.copyWith(
-          isDownloading: false,
-          status: '下载成功！',
-          data: fileData,
-        );
+
+        if (state.isDownloading) {
+          // 确保没有在下载过程中被取消
+          state = DownloadState(status: '下载成功！', data: fileData);
+        }
       } else {
         await downloader.downloadBook(
           book: book,
           format: format,
           savePath: savePath,
-          onStatusUpdate: (status) => state = state.copyWith(status: status),
-          onProgressUpdate: (progress) =>
-              state = state.copyWith(progress: progress),
+          onStatusUpdate: (status) {
+            if (state.isDownloading) {
+              // 只有在下载状态时才更新
+              state = state.copyWith(status: status);
+            }
+          },
+          onProgressUpdate: (progress) {
+            if (state.isDownloading) {
+              // 只有在下载状态时才更新
+              state = state.copyWith(progress: progress);
+            }
+          },
+          shouldContinue: () => state.isDownloading, // 检查是否应该继续
         );
-        state = state.copyWith(isDownloading: false, status: '下载成功！');
+
+        if (state.isDownloading) {
+          // 确保没有在下载过程中被取消
+          state = DownloadState(status: '下载成功！');
+        }
       }
     } catch (e) {
-      state = DownloadState(
-        isDownloading: false,
-        status: '错误: ${e.toString()}',
-      );
+      if (state.isDownloading) {
+        // 如果是主动取消的，不会进入这里
+        state = DownloadState(status: '下载失败: $e');
+      }
     }
+  }
+
+  // 简单的取消方法：直接设置 isDownloading 为 false
+  void cancelDownload() {
+    if (state.isDownloading) {
+      state = DownloadState(status: '下载已取消', isCancelled: true);
+    }
+  }
+
+  // 重置下载状态
+  void resetDownload() {
+    state = DownloadState();
   }
 }
 

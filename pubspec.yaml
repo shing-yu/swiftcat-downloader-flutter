@@ -42,7 +42,7 @@ dependencies:
   # 网络与数据处理
   dio: ^5.4.0                  # 功能强大的 HTTP 客户端
   crypto: ^3.0.3               # 用于 MD5 签名
-  encrypt: ^5.0.3              # 用于 AES 加解密
+  pointycastle: ^4.0.0         # 用于 AES 加解密 (替代 encrypt)
   archive: ^4.0.7              # 用于处理 ZIP 压缩包
   xml: ^6.1.0                  # 用于解析 XML 数据
 

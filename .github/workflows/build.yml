@@ -28,7 +28,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.38.3
+          flutter-version: 3.41.6
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -70,7 +70,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.38.3
+          flutter-version: 3.41.6
 
       - name: Get Flutter dependencies
         run: flutter pub get
@@ -101,7 +101,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.38.3
+          flutter-version: 3.41.6
       - run: flutter pub get
       - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
@@ -141,7 +141,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.38.3
+          flutter-version: 3.41.6
       - run: flutter pub get
       - run: flutter build macos --release # Flutter 默认构建 Universal Binary
       - uses: actions/upload-artifact@v4
@@ -162,7 +162,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: 3.38.3
+          flutter-version: 3.41.6
       - run: flutter pub get
       - run: flutter build linux --release
       - uses: actions/upload-artifact@v4

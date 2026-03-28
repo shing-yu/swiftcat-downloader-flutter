@@ -1,9 +1,10 @@
 // lib/core/api_client.dart
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:pointycastle/export.dart';
 import 'package:swiftcat_downloader/models/book.dart'; // 确认路径正确
 
 class ApiClient {
@@ -151,19 +152,30 @@ class ApiClient {
   }
 
   String decryptChapterContent(String encryptedContent) {
-    final key = encrypt.Key.fromBase16(_aesKeyHex);
+    // 将 hex 字符串转换为字节
+    final keyBytes = Uint8List.fromList(
+      List.generate(16, (i) => int.parse(_aesKeyHex.substring(i * 2, i * 2 + 2), radix: 16)),
+    );
 
     final encryptedBytes = base64.decode(encryptedContent);
-    final iv = encrypt.IV(encryptedBytes.sublist(0, 16));
-    final encrypter = encrypt.Encrypter(
-      encrypt.AES(key, mode: encrypt.AESMode.cbc),
-    );
+    final iv = Uint8List.fromList(encryptedBytes.sublist(0, 16));
+    final ciphertext = Uint8List.fromList(encryptedBytes.sublist(16));
 
-    final decrypted = encrypter.decrypt(
-      encrypt.Encrypted(encryptedBytes.sublist(16)),
-      iv: iv,
-    );
+    // 创建 AES-CBC 解密器
+    final cipher = CBCBlockCipher(AESEngine());
+    cipher.init(false, ParametersWithIV(KeyParameter(keyBytes), iv));
 
-    return decrypted;
+    // 解密
+    final paddedPlaintext = Uint8List(ciphertext.length);
+    var offset = 0;
+    while (offset < ciphertext.length) {
+      offset += cipher.processBlock(ciphertext, offset, paddedPlaintext, offset);
+    }
+
+    // 移除 PKCS7 padding
+    final paddingLength = paddedPlaintext.last;
+    final plaintext = Uint8List.sublistView(paddedPlaintext, 0, paddedPlaintext.length - paddingLength);
+
+    return utf8.decode(plaintext);
   }
 }

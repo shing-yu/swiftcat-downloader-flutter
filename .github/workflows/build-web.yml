@@ -29,8 +29,8 @@ jobs:
           TARGET_FILE="lib/core/api_client.dart"
           if [ -f "$TARGET_FILE" ]; then
             echo "Modifying API endpoints in $TARGET_FILE..."
-            sed -i 's#https://api-bc.wtzw.com#https://api-bc.wtzw.staredges.cn#g' $TARGET_FILE
-            sed -i 's#https://api-ks.wtzw.com#https://api-ks.wtzw.staredges.cn#g' $TARGET_FILE
+            sed -i 's#https://api-bc.wtzw.com#https://api-bc-wtzw.o3.hk#g' $TARGET_FILE
+            sed -i 's#https://api-ks.wtzw.com#https://api-ks-wtzw.o3.hk#g' $TARGET_FILE
             echo "File modification complete."
             cat $TARGET_FILE
           else
@@ -64,3 +64,8 @@ jobs:
 
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Deploy to EdgeOne Pages
+        run: npx -y edgeone pages deploy ./build/web/ -n swiftcat -t ${{ secrets.EDGEONE_API_TOKEN }}
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}

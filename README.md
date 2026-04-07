@@ -4,7 +4,7 @@
 
 [swiftcat-downloader](https://github.com/shing-yu/swiftcat-downloader) 的 Flutter 版本。
 
-**Flutter 版本是技术测试版本，不保证稳定性。**
+官方 Web 版本：https://sc.o3.hk/
 
 
 ## 特性

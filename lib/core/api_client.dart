@@ -1,9 +1,10 @@
 // lib/core/api_client.dart
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:pointycastle/export.dart';
 import 'package:swiftcat_downloader/models/book.dart'; // 确认路径正确
 
 class ApiClient {
@@ -13,9 +14,27 @@ class ApiClient {
   static const _baseUrlKs = "https://api-ks.wtzw.com";
 
   static const _versionList = [
-    '73720', '73700', '73620', '73600', '73500', '73420', '73400',
-    '73328', '73325', '73320', '73300', '73220', '73200', '73100',
-    '73000', '72900', '72820', '72800', '70720', '62010', '62112',
+    '73720',
+    '73700',
+    '73620',
+    '73600',
+    '73500',
+    '73420',
+    '73400',
+    '73328',
+    '73325',
+    '73320',
+    '73300',
+    '73220',
+    '73200',
+    '73100',
+    '73000',
+    '72900',
+    '72820',
+    '72800',
+    '70720',
+    '62010',
+    '62112',
   ];
 
   final Dio _dio = Dio();
@@ -31,9 +50,14 @@ class ApiClient {
     final version = _versionList[random.nextInt(_versionList.length)];
 
     final headers = {
-      "AUTHORIZATION": "", "app-version": version,
-      "application-id": "com.****.reader", "channel": "unknown",
-      "net-env": "1", "platform": "android", "qm-params": "", "reg": "0",
+      "AUTHORIZATION": "",
+      "app-version": version,
+      "application-id": "com.****.reader",
+      "channel": "unknown",
+      "net-env": "1",
+      "platform": "android",
+      "qm-params": "",
+      "reg": "0",
     };
 
     headers['sign'] = _generateSignature(headers, _signKey);
@@ -48,7 +72,7 @@ class ApiClient {
       'refresh_state': '8',
       'page': '1',
       'wd': keyword,
-      'is_short_story_user': '0'
+      'is_short_story_user': '0',
     };
     params['sign'] = _generateSignature(params, _signKey);
 
@@ -61,8 +85,9 @@ class ApiClient {
     if (response.statusCode == 200 && response.data['data'] != null) {
       List<dynamic> books = response.data['data']['books'] ?? [];
       return books
-          .where((json) =>
-              json['id'] != null && json['id'].toString().isNotEmpty)
+          .where(
+            (json) => json['id'] != null && json['id'].toString().isNotEmpty,
+          )
           .map((json) => SearchResultBook.fromSearchJson(json))
           .toList();
     } else {
@@ -97,9 +122,12 @@ class ApiClient {
       options: Options(headers: _getHeaders(bookId)),
     );
 
-    if (response.statusCode == 200 && response.data['data']['chapter_lists'] != null) {
+    if (response.statusCode == 200 &&
+        response.data['data']['chapter_lists'] != null) {
       List<dynamic> chaptersJson = response.data['data']['chapter_lists'];
-      chaptersJson.sort((a, b) => (a['chapter_sort'] as int).compareTo(b['chapter_sort']));
+      chaptersJson.sort(
+        (a, b) => (a['chapter_sort'] as int).compareTo(b['chapter_sort']),
+      );
       return chaptersJson.map((json) => BookChapter.fromJson(json)).toList();
     } else {
       throw Exception('获取目录失败: ${response.data['message']}');
@@ -124,17 +152,30 @@ class ApiClient {
   }
 
   String decryptChapterContent(String encryptedContent) {
-    final key = encrypt.Key.fromBase16(_aesKeyHex);
-
-    final encryptedBytes = base64.decode(encryptedContent);
-    final iv = encrypt.IV(encryptedBytes.sublist(0, 16));
-    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
-
-    final decrypted = encrypter.decrypt(
-      encrypt.Encrypted(encryptedBytes.sublist(16)),
-      iv: iv,
+    // 将 hex 字符串转换为字节
+    final keyBytes = Uint8List.fromList(
+      List.generate(16, (i) => int.parse(_aesKeyHex.substring(i * 2, i * 2 + 2), radix: 16)),
     );
 
-    return decrypted;
+    final encryptedBytes = base64.decode(encryptedContent);
+    final iv = Uint8List.fromList(encryptedBytes.sublist(0, 16));
+    final ciphertext = Uint8List.fromList(encryptedBytes.sublist(16));
+
+    // 创建 AES-CBC 解密器
+    final cipher = CBCBlockCipher(AESEngine());
+    cipher.init(false, ParametersWithIV(KeyParameter(keyBytes), iv));
+
+    // 解密
+    final paddedPlaintext = Uint8List(ciphertext.length);
+    var offset = 0;
+    while (offset < ciphertext.length) {
+      offset += cipher.processBlock(ciphertext, offset, paddedPlaintext, offset);
+    }
+
+    // 移除 PKCS7 padding
+    final paddingLength = paddedPlaintext.last;
+    final plaintext = Uint8List.sublistView(paddedPlaintext, 0, paddedPlaintext.length - paddingLength);
+
+    return utf8.decode(plaintext);
   }
 }

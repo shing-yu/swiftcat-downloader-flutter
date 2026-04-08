@@ -27,10 +27,11 @@ class SearchState {
   }
 }
 
-class SearchNotifier extends StateNotifier<SearchState> {
-  final ApiClient _apiClient;
-
-  SearchNotifier(this._apiClient) : super(SearchState());
+class SearchNotifier extends Notifier<SearchState> {
+  @override
+  SearchState build() {
+    return SearchState();
+  }
 
   Future<void> searchBooks(String keyword) async {
     if (keyword.trim().isEmpty) {
@@ -41,7 +42,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
-      final results = await _apiClient.searchBooks(keyword);
+      final apiClient = ref.read(apiClientProvider);
+      final results = await apiClient.searchBooks(keyword);
       state = state.copyWith(
         searchResults: results,
         isLoading: false,
@@ -61,7 +63,4 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
 final apiClientProvider = Provider((ref) => ApiClient());
 
-final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return SearchNotifier(apiClient);
-});
+final searchProvider = NotifierProvider<SearchNotifier, SearchState>(SearchNotifier.new);

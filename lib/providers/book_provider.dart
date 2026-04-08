@@ -25,15 +25,18 @@ class BookState {
   }
 }
 
-class BookNotifier extends StateNotifier<BookState> {
-  final ApiClient _apiClient;
-  BookNotifier(this._apiClient) : super(BookState());
+class BookNotifier extends Notifier<BookState> {
+  @override
+  BookState build() {
+    return BookState();
+  }
 
   Future<void> fetchBook(String bookId) async {
     state = BookState(isLoading: true);
     try {
-      final bookInfo = await _apiClient.fetchBookInfo(bookId);
-      final chapters = await _apiClient.fetchChapterList(bookId);
+      final apiClient = ref.read(apiClientProvider);
+      final bookInfo = await apiClient.fetchBookInfo(bookId);
+      final chapters = await apiClient.fetchChapterList(bookId);
       final fullBook = bookInfo.copyWith(catalog: chapters);
       state = BookState(book: fullBook);
     } catch (e) {
@@ -46,9 +49,7 @@ class BookNotifier extends StateNotifier<BookState> {
   }
 }
 
-final bookProvider = StateNotifierProvider<BookNotifier, BookState>((ref) {
-  return BookNotifier(ref.watch(apiClientProvider));
-});
+final bookProvider = NotifierProvider<BookNotifier, BookState>(BookNotifier.new);
 
 
 // --- 下载状态 ---
@@ -81,9 +82,11 @@ class DownloadState {
   }
 }
 
-class DownloadNotifier extends StateNotifier<DownloadState> {
-  final BookDownloader _downloader;
-  DownloadNotifier(this._downloader) : super(DownloadState());
+class DownloadNotifier extends Notifier<DownloadState> {
+  @override
+  DownloadState build() {
+    return DownloadState();
+  }
 
   // --- 新增: 清理下载数据的方法 ---
   void clearDownloadData() {
@@ -103,9 +106,12 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
     state = DownloadState(isDownloading: true, status: '开始下载...');
 
     try {
+      final apiClient = ref.read(apiClientProvider);
+      final downloader = BookDownloader(apiClient);
+      
       if (kIsWeb) {
         // --- Web 平台逻辑 ---
-        final fileData = await _downloader.downloadBookForWeb(
+        final fileData = await downloader.downloadBookForWeb(
           book: book,
           format: format,
           onStatusUpdate: (status) => state = state.copyWith(status: status),
@@ -117,7 +123,7 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
             isDownloading: false, status: '下载成功！', data: fileData);
       } else {
         // --- 原生平台逻辑 ---
-        await _downloader.downloadBook(
+        await downloader.downloadBook(
           book: book,
           format: format,
           savePath: savePath,
@@ -135,7 +141,4 @@ class DownloadNotifier extends StateNotifier<DownloadState> {
 }
 
 final downloadProvider =
-    StateNotifierProvider<DownloadNotifier, DownloadState>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return DownloadNotifier(BookDownloader(apiClient));
-});
+    NotifierProvider<DownloadNotifier, DownloadState>(DownloadNotifier.new);

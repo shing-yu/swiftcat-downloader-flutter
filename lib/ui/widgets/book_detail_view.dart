@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'progress_indicators.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
@@ -40,9 +41,13 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
         }
       }
     } catch (err) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(behavior: SnackBarBehavior.floating, content: Text('无法获取下载目录')));
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('无法获取下载目录'),
+        ),
+      );
     }
     return directory?.path;
   }
@@ -149,9 +154,12 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('文件路径获取失败: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('文件路径获取失败: $e'),
+        ),
+      );
       return;
     }
 
@@ -162,22 +170,27 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       ref
           .read(downloadProvider.notifier)
           .startDownload(
-        book: book,
-        format: _selectedFormat,
-        savePath: outputPath,
-      );
+            book: book,
+            format: _selectedFormat,
+            savePath: outputPath,
+          );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(behavior: SnackBarBehavior.floating, content: Text('操作已取消')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('操作已取消'),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     ref.listen<DownloadState>(downloadProvider, (previous, next) {
-      if (previous?.isDownloading == true && !next.isDownloading && next.status.contains('成功')) {
+      if (previous?.isDownloading == true &&
+          !next.isDownloading &&
+          next.status.contains('成功')) {
         if (_lastDownloadedPath != null) {
           final String path = _lastDownloadedPath!;
           final String fileName = p.basename(path);
@@ -185,26 +198,26 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           if (kIsWeb) {
             if (next.data != null) {
               FileSaver.instance.saveFile(
-                  name: p.basenameWithoutExtension(fileName),
-                  bytes: next.data!,
-                  fileExtension: p.extension(fileName).replaceFirst('.', ''),
-                  mimeType: MimeType.text
+                name: p.basenameWithoutExtension(fileName),
+                bytes: next.data!,
+                fileExtension: p.extension(fileName).replaceFirst('.', ''),
+                mimeType: MimeType.text,
               );
               ref.read(downloadProvider.notifier).clearDownloadData();
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('下载完成: $path'),
-                  behavior: SnackBarBehavior.floating,
-                  persist: false,
-                  action: _selectedFormat != DownloadFormat.chapterTxt
-                      ? SnackBarAction(
-                    label: '打开',
-                    onPressed: () => OpenFile.open(path),
-                  )
-                      : null,
-                )
+              SnackBar(
+                content: Text('下载完成: $path'),
+                behavior: SnackBarBehavior.floating,
+                persist: false,
+                action: _selectedFormat != DownloadFormat.chapterTxt
+                    ? SnackBarAction(
+                        label: '打开',
+                        onPressed: () => OpenFile.open(path),
+                      )
+                    : null,
+              ),
             );
           }
           _lastDownloadedPath = null;
@@ -236,7 +249,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
     if (bookState.isLoading) {
       return Container(
         constraints: const BoxConstraints(minHeight: 400),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const Center(child: AccessibleCircularProgressIndicator()),
       );
     }
 
@@ -267,7 +280,7 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
                       height: 160,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.book, size: 120),
+                          const Icon(Icons.book, size: 120),
                     ),
                   ),
                 const SizedBox(width: 16),
@@ -345,17 +358,19 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
       onSelectionChanged: downloadState.isDownloading
           ? null // 下载中禁用
           : (Set<DownloadFormat> newSelection) {
-        setState(() {
-          // 获取集合中的第一个元素（也是唯一一个）
-          _selectedFormat = newSelection.first;
-        });
-      },
+              setState(() {
+                // 获取集合中的第一个元素（也是唯一一个）
+                _selectedFormat = newSelection.first;
+              });
+            },
     );
 
     final downloadButton = ElevatedButton.icon(
       icon: const Icon(Icons.download),
       label: const Text('开始下载'),
-      onPressed: downloadState.isDownloading ? null : () => _startDownload(book),
+      onPressed: downloadState.isDownloading
+          ? null
+          : () => _startDownload(book),
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -373,7 +388,10 @@ class _BookDetailViewState extends ConsumerState<BookDetailView> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch, // 拉伸填满宽度
             children: [
-              const Text('下载格式', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              const Text(
+                '下载格式',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               // 如果选项太多，可以包裹在 SingleChildScrollView(scrollDirection: Axis.horizontal, child: ...)
               formatSelector,

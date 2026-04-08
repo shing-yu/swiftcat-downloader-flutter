@@ -1,13 +1,11 @@
 // lib/core/book_downloader.dart
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, Uint8List;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:archive/archive.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
-
 
 import 'api_client.dart';
 import '../models/book.dart';
@@ -79,11 +77,11 @@ class BookDownloader {
           fileData = await _generateSingleTxtForWeb(book, decryptedChapters);
           break;
         case DownloadFormat.epub:
-        // 明确将 Map<String, String> 传递给 _generateEpubForWeb
+          // 明确将 Map<String, String> 传递给 _generateEpubForWeb
           fileData = await _generateEpubForWeb(book, decryptedChapters);
           break;
         case DownloadFormat.chapterTxt:
-        // 此处已在函数开头处理，理论上不会执行到
+          // 此处已在函数开头处理，理论上不会执行到
           throw UnsupportedError('Web平台不支持分章节下载。');
       }
       onProgressUpdate(1.0);
@@ -91,7 +89,7 @@ class BookDownloader {
       return fileData;
     } catch (e) {
       onStatusUpdate('下载失败: $e');
-      print('Web download failed: $e');
+      debugPrint('Web download failed: $e');
       rethrow;
     }
   }
@@ -190,7 +188,7 @@ class BookDownloader {
     } catch (e) {
       onStatusUpdate('下载失败: $e');
       // 如果需要，可以在这里添加更详细的日志记录
-      print('Download failed: $e');
+      debugPrint('Download failed: $e');
       rethrow;
     } finally {
       // 确保临时文件夹最后一定会被清理
@@ -208,9 +206,9 @@ class BookDownloader {
 
   // --- 新增: 为Web生成TXT文件内容的方法 ---
   Future<Uint8List> _generateSingleTxtForWeb(
-      Book book,
-      Map<String, String> chapters,
-      ) async {
+    Book book,
+    Map<String, String> chapters,
+  ) async {
     final buffer = StringBuffer();
     buffer.writeln('标题: ${book.title}');
     buffer.writeln('作者: ${book.author}');
@@ -227,10 +225,10 @@ class BookDownloader {
   }
 
   Future<void> _generateSingleTxt(
-      Book book,
-      Map<String, String> chapters,
-      String path,
-      ) async {
+    Book book,
+    Map<String, String> chapters,
+    String path,
+  ) async {
     final buffer = StringBuffer();
     buffer.writeln('标题: ${book.title}');
     buffer.writeln('作者: ${book.author}');
@@ -246,10 +244,10 @@ class BookDownloader {
   }
 
   Future<void> _generateChapterTxts(
-      Book book,
-      Map<String, String> chapters,
-      String dirPath,
-      ) async {
+    Book book,
+    Map<String, String> chapters,
+    String dirPath,
+  ) async {
     final bookDir = Directory(p.join(dirPath, _sanitizeFilename(book.title)));
     await bookDir.create(recursive: true);
 
@@ -267,9 +265,9 @@ class BookDownloader {
 
   // 为Web平台生成EPUB文件（返回字节数组）
   Future<Uint8List> _generateEpubForWeb(
-      Book book,
-      Map<String, String> chapters,
-      ) async {
+    Book book,
+    Map<String, String> chapters,
+  ) async {
     // 创建EPUB构建器
     final epubBuilder = EpubBuilder(
       title: book.title,
@@ -286,7 +284,7 @@ class BookDownloader {
           epubBuilder.setCoverImage(imageData);
         }
       } catch (e) {
-        print('下载封面失败: $e');
+        debugPrint('下载封面失败: $e');
       }
     }
 
@@ -306,10 +304,10 @@ class BookDownloader {
 
   // 生成EPUB文件并保存到本地路径
   Future<void> _generateEpub(
-      Book book,
-      Map<String, String> chapters,
-      String path,
-      ) async {
+    Book book,
+    Map<String, String> chapters,
+    String path,
+  ) async {
     final epubData = await _generateEpubForWeb(book, chapters);
     await File(path).writeAsBytes(epubData);
   }
@@ -323,7 +321,7 @@ class BookDownloader {
       );
       return response.data;
     } catch (e) {
-      print('Failed to download cover image: $e');
+      debugPrint('Failed to download cover image: $e');
       return null;
     }
   }

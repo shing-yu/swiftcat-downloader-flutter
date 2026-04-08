@@ -46,39 +46,17 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final searchController = TextEditingController();
-
-    ref.listen<SearchState>(searchProvider, (previous, next) {
-      final isMobile = MediaQuery.of(context).size.width < 600;
-      if (isMobile && (previous?.isLoading ?? false) && !next.isLoading) {
-        showDialog(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('搜索结果'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: SearchResultView(
-                onResultSelected: () {
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('关闭'),
-                onPressed: () => Navigator.of(dialogContext).pop(),
-              ),
-            ],
-          ),
-        );
-      }
-    });
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     // --- 核心修改点: 重构 performSearch 方法 ---
     void performSearch() {
       final rawInput = searchController.text.trim();
       if (rawInput.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('请输入小说ID、链接或关键词')),
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('请输入小说ID、链接或关键词'),
+          ),
         );
         return;
       }
@@ -92,7 +70,7 @@ class HomeScreen extends ConsumerWidget {
         ref.read(bookProvider.notifier).fetchBook(parsedId);
         ref.read(searchProvider.notifier).clearSearch();
       } else {
-        ref.read(searchKeywordProvider.notifier).state = rawInput;
+        ref.read(searchKeywordProvider.notifier).setValue(rawInput);
         ref.read(searchProvider.notifier).searchBooks(rawInput);
       }
     }
@@ -105,9 +83,7 @@ class HomeScreen extends ConsumerWidget {
         decoration: InputDecoration(
           labelText: '搜索',
           hintText: '输入小说ID、链接或关键词',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24.0),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(24.0)),
           suffixIcon: IconButton(
             icon: const Icon(Icons.search),
             onPressed: performSearch,
@@ -128,9 +104,10 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             // 根据当前主题模式显示不同的图标
             icon: Icon(
-                currentBrightness == Brightness.dark
-                    ? Icons.light_mode_outlined // 在暗色模式下显示太阳
-                    : Icons.dark_mode_outlined  // 在亮色/系统模式下显示月亮
+              currentBrightness == Brightness.dark
+                  ? Icons
+                        .light_mode_outlined // 在暗色模式下显示太阳
+                  : Icons.dark_mode_outlined, // 在亮色/系统模式下显示月亮
             ),
             tooltip: '切换模式',
             onPressed: () {
@@ -146,8 +123,13 @@ class HomeScreen extends ConsumerWidget {
               showAboutDialog(
                 context: context,
                 applicationName: '灵猫小说下载器 flutter',
-                applicationVersion: 'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
-                applicationIcon: Image.asset('assets/logo.png', width: 35, height: 35),
+                applicationVersion:
+                    'v${globalPackageInfo?.version} (build ${globalPackageInfo?.buildNumber})',
+                applicationIcon: Image.asset(
+                  'assets/logo.png',
+                  width: 35,
+                  height: 35,
+                ),
                 applicationLegalese: '© 2025 StarEdge Studio\n基于原Python项目重构',
                 children: [
                   Padding(
@@ -161,13 +143,13 @@ class HomeScreen extends ConsumerWidget {
                           const TextSpan(text: '此应用为学习和技术演示目的而创建\n基于 '),
                           TextSpan(
                             text: 'SSLA 1.0',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                            ),
+                            style: const TextStyle(color: Colors.blue),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 // 在此处替换为您要打开的SSLA 1.0许可的URL
-                                launchUrl(Uri.parse('https://staredges.cn/ssla-1.0/'));
+                                launchUrl(
+                                  Uri.parse('https://staredges.cn/ssla-1.0/'),
+                                );
                               },
                           ),
                           const TextSpan(text: ' 许可发布\n禁止用于商业用途或盈利性活动\n'),
@@ -178,7 +160,11 @@ class HomeScreen extends ConsumerWidget {
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 // 在此处替换为您的GitHub仓库URL
-                                launchUrl(Uri.parse('https://github.com/shing-yu/swiftcat-downloader-flutter'));
+                                launchUrl(
+                                  Uri.parse(
+                                    'https://github.com/shing-yu/swiftcat-downloader-flutter',
+                                  ),
+                                );
                               },
                           ),
                         ],
@@ -196,14 +182,25 @@ class HomeScreen extends ConsumerWidget {
           Expanded(
             // --- 修改点 1: 优化桌面布局 ---
             child: ResponsiveLayout(
-              // 移动端布局：搜索框和详情视图垂直排列
-              mobileBody: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    searchBar,
-                    const BookDetailView(),
-                  ],
-                ),
+              // 移动端布局：搜索框和结果列表
+              mobileBody: Column(
+                children: [
+                  searchBar,
+                  Expanded(
+                    child: SearchResultView(
+                      onResultSelected: isMobile
+                          ? () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const BookDetailScreen(),
+                                ),
+                              );
+                            }
+                          : null,
+                    ),
+                  ),
+                ],
               ),
               // 桌面端布局：左右分栏
               desktopBody: Row(
@@ -215,9 +212,7 @@ class HomeScreen extends ConsumerWidget {
                     child: Column(
                       children: [
                         searchBar,
-                        const Expanded(
-                          child: SearchResultView(),
-                        ),
+                        const Expanded(child: SearchResultView()),
                       ],
                     ),
                   ),
@@ -225,7 +220,8 @@ class HomeScreen extends ConsumerWidget {
                   // 右侧栏
                   Expanded(
                     flex: 3,
-                    child: SingleChildScrollView( // 保证右侧内容过多时可以滚动
+                    child: SingleChildScrollView(
+                      // 保证右侧内容过多时可以滚动
                       child: const BookDetailView(),
                     ),
                   ),
@@ -234,6 +230,27 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const StatusBar(),
+        ],
+      ),
+    );
+  }
+}
+
+class BookDetailScreen extends ConsumerWidget {
+  const BookDetailScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookTitle = ref.watch(bookProvider).book?.title;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(bookTitle?.isNotEmpty == true ? bookTitle! : '书籍详情'),
+      ),
+      body: const Column(
+        children: [
+          Expanded(child: SingleChildScrollView(child: BookDetailView())),
+          StatusBar(),
         ],
       ),
     );

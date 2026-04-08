@@ -212,64 +212,15 @@ class EpubBuilder {
   /// 创建样式表
   String _createStylesheet() {
     return '''
-@page {
-  margin-bottom: 5pt;
-  margin-top: 5pt;
-}
-@font-face {
-  font-family: "HarmonyOS Sans SC";
-  panose-1: 0 0 5 0 0 0 0 0 0 0;
-  src: url(../fonts/HarmonyOS_Sans_SC_Regular.woff) format("woff");
-}
-html, .calibre {
-  line-height: 1.4;
-}
-body, .calibre1 {
-  display: block;
-  font-family: "HarmonyOS Sans SC", "Source Han Sans SC", "Microsoft YaHei", "SimSun", "宋体", "Heiti SC", "黑体", "WenQuanYi Micro Hei", "文泉驿微米黑", "STHeiti", "华文黑体", Arial, sans-serif;
+body {
+  font-family: "Microsoft YaHei", "SimSun", "Heiti SC", Arial, sans-serif;
   font-size: 1em;
   line-height: 1.4;
-  padding-left: 0;
-  padding-right: 0;
   margin: 0 5pt;
 }
-p, .calibre2 {
-  border-bottom: 0;
-  border-top: 0;
-  display: block;
-  line-height: 1.4;
-  padding-bottom: 0;
-  padding-top: 0;
+p {
   text-indent: 2em;
   margin: 1em 0;
-}
-.calibre3 {
-  border-bottom: 0;
-  border-top: 0;
-  display: block;
-  line-height: 1.4;
-  margin-bottom: 1em;
-  margin-top: 1em;
-  padding-bottom: 0;
-  padding-top: 0;
-  text-indent: 2em;
-}
-h2 {
-  background-color: #C1CCC0;
-  display: block;
-  font-size: 1.28571em;
-  font-weight: bold;
-  line-height: 1.2;
-  text-align: justify;
-  margin: 0 0 0.83em;
-  padding: 45px 5px 5px;
-  border-top: #586357 none 0;
-  border-right: #586357 double 5px;
-  border-bottom: #586357 none 0;
-  border-left: #586357 solid 20px;
-}
-ol li{
-  list-style-type: none;
 }
 ''';
   }

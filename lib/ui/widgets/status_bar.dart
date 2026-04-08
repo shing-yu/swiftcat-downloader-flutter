@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/book_provider.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
+import 'progress_indicators.dart';
 
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});
@@ -13,22 +14,22 @@ class StatusBar extends ConsumerWidget {
     final downloadState = ref.watch(downloadProvider);
     final isMobile =
         defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS;
+        defaultTargetPlatform == TargetPlatform.iOS;
     final textStyle = isMobile
         ? Theme.of(context).textTheme.bodySmall?.copyWith(
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-    )
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          )
         : Theme.of(context).textTheme.bodyMedium?.copyWith(
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-    );
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       color: Theme.of(
         context,
-      ).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       child: Row(
         children: [
           Expanded(
@@ -41,10 +42,11 @@ class StatusBar extends ConsumerWidget {
           if (downloadState.isDownloading)
             SizedBox(
               width: 120,
-              child: LinearProgressIndicator(
+              child: AccessibleLinearProgressIndicator(
                 value: downloadState.progress,
                 minHeight: 6,
-                borderRadius: BorderRadius.circular(3),
+                gap: 4,
+                endDotSize: 6,
               ),
             ),
         ],

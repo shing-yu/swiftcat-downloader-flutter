@@ -37,12 +37,12 @@ dependencies:
   cupertino_icons: ^1.0.2
 
   # 状态管理
-  flutter_riverpod: ^2.4.9     # 用于状态管理
+  flutter_riverpod: ^3.2.1     # 用于状态管理
 
   # 网络与数据处理
   dio: ^5.4.0                  # 功能强大的 HTTP 客户端
   crypto: ^3.0.3               # 用于 MD5 签名
-  encrypt: ^5.0.3              # 用于 AES 加解密
+  pointycastle: ^4.0.0         # 用于 AES 加解密 (替代 encrypt)
   archive: ^4.0.7              # 用于处理 ZIP 压缩包
   xml: ^6.1.0                  # 用于解析 XML 数据
 
@@ -58,8 +58,8 @@ dependencies:
   flutter_staggered_grid_view: ^0.7.0 # 用于创建复杂的响应式网格布局
   window_size: ^0.1.0
   url_launcher: ^6.0.0
-  package_info_plus: ^8.3.0
-  device_info_plus: ^11.5.0
+  package_info_plus: ^9.0.0
+  device_info_plus: ^12.3.0
   dynamic_color: ^1.8.1
 
 dev_dependencies:
